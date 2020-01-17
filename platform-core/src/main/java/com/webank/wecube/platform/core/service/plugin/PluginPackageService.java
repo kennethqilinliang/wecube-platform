@@ -14,11 +14,13 @@ import com.webank.wecube.platform.core.parser.PluginConfigXmlValidator;
 import com.webank.wecube.platform.core.parser.PluginPackageDataModelDtoValidator;
 import com.webank.wecube.platform.core.parser.PluginPackageValidator;
 import com.webank.wecube.platform.core.parser.PluginPackageXmlParser;
-import com.webank.wecube.platform.core.service.*;
+import com.webank.wecube.platform.core.service.CommandService;
+import com.webank.wecube.platform.core.service.PluginInstanceService;
+import com.webank.wecube.platform.core.service.PluginPackageDataModelService;
+import com.webank.wecube.platform.core.service.ScpService;
 import com.webank.wecube.platform.core.service.user.UserManagementService;
 import com.webank.wecube.platform.core.support.S3Client;
 import com.webank.wecube.platform.core.utils.SystemUtils;
-
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -238,12 +240,16 @@ public class PluginPackageService {
 
     private void updateSystemVariableStatus(PluginPackage pluginPackage) {
         List<SystemVariable> systemVariables = systemVariableRepository.findAllByScope(pluginPackage.getName());
-        systemVariables.stream()
-                .filter(systemVariable -> SystemVariable.ACTIVE.equals(systemVariable.getStatus()) && !pluginPackage.getId().equals(systemVariable.getSource()))
-                .map(systemVariable -> systemVariable.deactivate());
-        systemVariables.stream()
-                .filter(systemVariable -> SystemVariable.INACTIVE.equals(systemVariable.getStatus()) && pluginPackage.getId().equals(systemVariable.getSource()))
-                .map(systemVariable -> systemVariable.activate());
+        systemVariables.forEach(systemVariable->{
+            if (SystemVariable.ACTIVE.equals(systemVariable.getStatus())&& !pluginPackage.getId().equals(systemVariable.getSource())) {
+                systemVariable.deactivate();
+            }
+            if (SystemVariable.INACTIVE.equals(systemVariable.getStatus())
+                    && pluginPackage.getId().equals(systemVariable.getSource())) {
+                systemVariable.activate();
+            }
+        });
+        
         systemVariableRepository.saveAll(systemVariables);
     }
 
@@ -274,7 +280,7 @@ public class PluginPackageService {
     }
 
     private void ensureNoMoreThanTwoActivePackages(PluginPackage pluginPackage) {
-        Optional<List<PluginPackage>> allByNameAndStatus = pluginPackageRepository.findAllActiveByName(pluginPackage.getName());
+        Optional<List<PluginPackage>> allByNameAndStatus = pluginPackageRepository.findAllActiveByNameOrderByUploadTimestampAsc(pluginPackage.getName());
         if (allByNameAndStatus.isPresent()) {
             List<PluginPackage> pluginPackages = allByNameAndStatus.get();
             if (pluginPackages.size() > 1) {

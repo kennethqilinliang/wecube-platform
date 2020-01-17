@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.webank.wecube.platform.core.commons.WecubeCoreException;
 import com.webank.wecube.platform.core.domain.plugin.PluginConfigInterfaceParameter;
+import com.webank.wecube.platform.core.entity.workflow.TaskNodeDefInfoEntity;
+import com.webank.wecube.platform.core.entity.workflow.TaskNodeInstInfoEntity;
 import com.webank.wecube.platform.core.jpa.workflow.TaskNodeDefInfoRepository;
 import com.webank.wecube.platform.core.jpa.workflow.TaskNodeExecParamRepository;
 import com.webank.wecube.platform.core.jpa.workflow.TaskNodeExecRequestRepository;
@@ -19,7 +21,7 @@ import com.webank.wecube.platform.core.jpa.workflow.TaskNodeInstInfoRepository;
 import com.webank.wecube.platform.core.service.datamodel.ExpressionService;
 import com.webank.wecube.platform.core.service.plugin.PluginConfigService;
 
-public abstract class AbstractPluginInvocationService {
+public abstract class AbstractPluginInvocationService extends AbstractWorkflowService{
 
     protected static final String CALLBACK_PARAMETER_KEY = "callbackParameter";
 
@@ -31,6 +33,8 @@ public abstract class AbstractPluginInvocationService {
     
     protected static final String DEFAULT_VALUE_DATA_TYPE_STRING = "";
     protected static final int DEFAULT_VALUE_DATA_TYPE_NUMBER = 0;
+    
+    protected static final int MAX_PARAM_VAL_SIZE = 3000;
 
     protected final Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -54,17 +58,38 @@ public abstract class AbstractPluginInvocationService {
 
     @Autowired
     protected ExpressionService expressionService;
+    
+    
+    protected TaskNodeInstInfoEntity findExactTaskNodeInstInfoEntityWithNodeId(List<TaskNodeInstInfoEntity> nodeInstEntities, String nodeId){
+        for(TaskNodeInstInfoEntity nodeInst: nodeInstEntities){
+            if(nodeId.equalsIgnoreCase(nodeInst.getNodeId())){
+                return nodeInst;
+            }
+        }
+        
+        return null;
+    }
+    
+    protected TaskNodeDefInfoEntity findExactTaskNodeDefInfoEntityWithNodeId(List<TaskNodeDefInfoEntity> nodeDefEntities, String nodeId){
+        for(TaskNodeDefInfoEntity nodeDef : nodeDefEntities){
+            if(nodeId.equalsIgnoreCase(nodeDef.getNodeId())){
+                return nodeDef;
+            }
+        }
+        
+        return null;
+    }
 
     protected String trimWithMaxLength(String s) {
         if (s == null) {
             return "";
         }
 
-        if (s.length() < 220) {
+        if (s.length() < 200) {
             return s;
         }
 
-        return s.substring(0, 220);
+        return s.substring(0, 200);
     }
 
     protected String asString(Object val, String sType) {
@@ -81,6 +106,14 @@ public abstract class AbstractPluginInvocationService {
 
         return val.toString();
 
+    }
+    
+    protected String trimExceedParamValue(String val, int size){
+        if(val.length() > size){
+            return val.substring(0, size);
+        }
+        
+        return val;
     }
 
     protected Object fromString(String val, String sType) {

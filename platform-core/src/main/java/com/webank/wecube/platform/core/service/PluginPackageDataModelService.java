@@ -22,4 +22,5 @@ public interface PluginPackageDataModelService {
     List<PluginPackageAttributeDto> getRefByInfo(String packageName, String entityName);
 
     DataModelComparisionDto compareDataModels(String newDataModelId, String oldDataModelId);
+    List<PluginPackageAttributeDto> entityView(String packageName, String entityName);
 }

@@ -1,25 +1,18 @@
 package com.webank.wecube.platform.core.dto.user;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-@JsonInclude(JsonInclude.Include.NON_NULL)
+/**
+ * @author howechen
+ */
 public class RoleDto {
 
-    @JsonProperty(value = "createdBy")
     private String createdBy;
-    @JsonProperty(value = "updatedBy")
     private String updatedBy;
-    @JsonProperty(value = "createdTime")
     private String createdTime;
-    @JsonProperty(value = "updatedTime")
     private String updatedTime;
-    @JsonProperty(value = "id")
-    private Long id;
-    @JsonProperty(value = "displayName")
+    private String id;
     private String displayName;
-    @JsonProperty(value = "name")
     private String name;
+    private String email;
 
 
     public RoleDto() {
@@ -30,7 +23,7 @@ public class RoleDto {
         this.name = name;
     }
 
-    public RoleDto(String createdBy, String updatedBy, String createdTime, String updatedTime, Long id, String displayName, String name) {
+    public RoleDto(String createdBy, String updatedBy, String createdTime, String updatedTime, String id, String displayName, String name) {
         this.createdBy = createdBy;
         this.updatedBy = updatedBy;
         this.createdTime = createdTime;
@@ -88,12 +81,19 @@ public class RoleDto {
         this.updatedTime = updatedTime;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
 }

@@ -32,6 +32,7 @@ services:
     environment:
       - GATEWAY_HOST={{GATEWAY_HOST}}
       - GATEWAY_PORT={{GATEWAY_PORT}}
+      - PUBLIC_DOMAIN={{PUBLIC_DOMAIN}}
       - TZ=Asia/Shanghai
     command: /bin/bash -c "envsubst < /etc/nginx/conf.d/nginx.tpl > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 
@@ -80,6 +81,8 @@ services:
       - STATIC_RESOURCE_SERVER_PORT={{STATIC_RESOURCE_SERVER_PORT}}
       - STATIC_RESOURCE_SERVER_PATH={{STATIC_RESOURCE_SERVER_PATH}}
       - GATEWAY_URL={{GATEWAY_URL}}
+      - JWT_SSO_AUTH_URI={{JWT_SSO_AUTH_URI}}
+      - JWT_SSO_TOKEN_URI={{JWT_SSO_TOKEN_URI}}
       
   auth-server:
     image: {{AUTH_SERVER_IMAGE_NAME}}:{{AUTH_SERVER_IMAGE_VERSION}}

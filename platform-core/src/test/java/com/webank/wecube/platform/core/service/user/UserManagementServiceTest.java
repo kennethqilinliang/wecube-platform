@@ -8,6 +8,7 @@ import com.webank.wecube.platform.core.dto.user.RoleDto;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.ExpectedCount;
@@ -28,6 +29,7 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
     @Autowired
     UserManagementServiceImpl userManagementService;
     @Autowired
+    @Qualifier(value = "userJwtSsoTokenRestTemplate")
     private RestTemplate restTemplate;
     @Autowired
     private ApplicationProperties applicationProperties;
@@ -99,14 +101,14 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
         mockRetrieveRoleServer(this.server);
         List<RoleDto> retrieveRoleResultList = userManagementService.retrieveRole();
         assertThat(retrieveRoleResultList.size()).isEqualTo(RETRIEVE_ROLE_SIZE);
-        assertThat(retrieveRoleResultList.get(0).getId()).isEqualTo(1);
+        assertThat(retrieveRoleResultList.get(0).getId()).isEqualTo("1");
         this.server.verify();
     }
 
     @Test
     public void deleteRoleShouldSucceed() {
         mockDeleteRoleServer(this.server);
-        Long roleId = 1L;
+        String roleId = "1";
         CommonResponseDto responseDto = userManagementService.deleteRole(this.token, roleId);
         assertThat(responseDto.getStatus()).isEqualTo(CommonResponseDto.STATUS_OK);
         this.server.verify();
@@ -115,9 +117,10 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
     @Test
     public void deleteRoleInternalShouldSucceed() {
         mockDeleteRoleServer(this.server);
-        Long roleId = 1L;
+        String roleId = "1";
+        String token = "Bearer";
         try {
-            userManagementService.deleteRole(roleId);
+            userManagementService.deleteRole(token, roleId);
         } catch (WecubeCoreException e) {
             fail(e.getMessage());
         }
@@ -136,7 +139,7 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
     @Test
     public void getUsersFromRoleShouldSucceed() {
         mockGetUsersFromRoleServer(this.server);
-        Long roleId = 1L;
+        String roleId = "1";
         CommonResponseDto responseDto = userManagementService.getUsersByRoleId(this.token, roleId);
         assertThat(responseDto.getStatus()).isEqualTo(CommonResponseDto.STATUS_OK);
         this.server.verify();
@@ -145,7 +148,7 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
     @Test
     public void grantRoleForUserShouldSucceed() {
         mockGrantRoleToUsersServer(this.server);
-        Long roleId = 2L;
+        String roleId = "2";
         List<Object> userIdList = Collections.singletonList(2);
         CommonResponseDto responseDto = userManagementService.grantRoleToUsers(this.token, roleId, userIdList);
         assertThat(responseDto.getStatus()).isEqualTo(CommonResponseDto.STATUS_OK);
@@ -156,7 +159,7 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
     @Test
     public void revokeRoleFromUserShouldSucceed() {
         mockRevokeRoleFromUsers(this.server);
-        Long roleId = 2L;
+        String roleId = "2";
         List<Object> userIdList = Collections.singletonList(2);
         CommonResponseDto responseDto = userManagementService.revokeRoleFromUsers(this.token, roleId, userIdList);
         assertThat(responseDto.getStatus()).isEqualTo(CommonResponseDto.STATUS_OK);
@@ -253,7 +256,7 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
                         "    \"updatedBy\": null,\n" +
                         "    \"createdTime\": \"2019-12-04T06:37:39.805+0000\",\n" +
                         "    \"updatedTime\": null,\n" +
-                        "    \"id\": 1,\n" +
+                        "    \"id\": \"1\",\n" +
                         "    \"name\": \"fakeAdministrator\",\n" +
                         "    \"displayName\": \"fake administrator\"\n" +
                         "  }\n" +
@@ -273,7 +276,7 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
                         "      \"updatedBy\": null,\n" +
                         "      \"createdTime\": \"2019-12-04T06:37:40.000+0000\",\n" +
                         "      \"updatedTime\": null,\n" +
-                        "      \"id\": 1,\n" +
+                        "      \"id\": \"1\",\n" +
                         "      \"name\": \"fakeAdministrator\",\n" +
                         "      \"displayName\": \"fake administrator\"\n" +
                         "    }\n" +
@@ -307,7 +310,7 @@ public class UserManagementServiceTest extends DatabaseBasedTest {
                         "      \"updatedBy\": null,\n" +
                         "      \"createdTime\": \"2019-12-04T06:56:39.000+0000\",\n" +
                         "      \"updatedTime\": null,\n" +
-                        "      \"id\": 1,\n" +
+                        "      \"id\": \"1\",\n" +
                         "      \"name\": \"fakeAdministrator\",\n" +
                         "      \"displayName\": \"fake administrator\"\n" +
                         "    }\n" +

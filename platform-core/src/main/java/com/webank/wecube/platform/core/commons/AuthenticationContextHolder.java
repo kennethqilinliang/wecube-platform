@@ -38,8 +38,18 @@ public final class AuthenticationContextHolder {
         return null;
     }
 
+    public static Set<String> getCurrentUserRoles() {
+        AuthenticatedUser u = currentUser.get();
+        if (u != null) {
+            return u.getAuthorities();
+        }
+
+        return null;
+    }
+
     public static class AuthenticatedUser {
         private final String username;
+        private String token;
         private Set<String> grantedAuthorities = new HashSet<String>();
 
         public AuthenticatedUser(String username) {
@@ -65,6 +75,13 @@ public final class AuthenticationContextHolder {
             return this;
         }
 
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
+        }
     }
 
 }

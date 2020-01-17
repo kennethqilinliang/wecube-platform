@@ -39,7 +39,7 @@ public class PluginPackageAttributeRepositoryTest extends DatabaseBasedTest {
         String attributeDescription = null;
         PluginPackageAttribute attribute = new PluginPackageAttribute(entity, null, "id", attributeDescription, DataModelDataType.Integer.getCode());
 
-        entity.setPluginPackageAttributes(newArrayList(attribute));
+        entity.setPluginPackageAttributeList(newArrayList(attribute));
         dataModel.setPluginPackageEntities(newHashSet(entity));
 
         dataModelRepository.save(dataModel);

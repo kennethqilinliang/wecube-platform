@@ -5,40 +5,40 @@
 </template>
 
 <script>
-import { getSysParams } from "@/api/server";
+import { getSysParams } from '@/api/server'
 export default {
-  name: "sys-params",
-  data() {
+  name: 'sys-params',
+  data () {
     return {
       tableData: [],
       tableColumns: [
         {
-          title: "归属",
-          key: "scopeType"
+          title: this.$t('source'),
+          key: 'scopeType'
         },
         {
-          title: "参数名称",
-          key: "name"
+          title: this.$t('name'),
+          key: 'name'
         },
         {
-          title: "参数值",
-          key: "value"
+          title: this.$t('table_value'),
+          key: 'value'
         },
         {
-          title: "说明",
-          key: "description"
+          title: this.$t('description'),
+          key: 'description'
         },
         {
-          title: "状态",
-          key: "status"
+          title: this.$t('status'),
+          key: 'status'
         }
       ]
-    };
+    }
   },
   watch: {
     pkgId: {
       handler: () => {
-        this.getData();
+        this.getData()
       }
     }
   },
@@ -48,16 +48,16 @@ export default {
       type: Number
     }
   },
-  created() {
-    this.getData();
+  created () {
+    this.getData()
   },
   methods: {
-    async getData() {
-      let { status, data, message } = await getSysParams(this.pkgId);
-      if (status === "OK") {
-        this.tableData = data;
+    async getData () {
+      let { status, data } = await getSysParams(this.pkgId)
+      if (status === 'OK') {
+        this.tableData = data
       }
     }
   }
-};
+}
 </script>

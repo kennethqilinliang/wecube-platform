@@ -10,8 +10,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "plugin_package_entities", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"data_model_id", "name"})
-})
+        @UniqueConstraint(columnNames = { "data_model_id", "name" }) })
 public class PluginPackageEntity {
 
     @Id
@@ -38,26 +37,24 @@ public class PluginPackageEntity {
     private String description;
 
     @JsonManagedReference
-    @OneToMany(mappedBy = "pluginPackageEntity", cascade = CascadeType.ALL)
-    private List<PluginPackageAttribute> pluginPackageAttributes;
+    @OneToMany(mappedBy = "pluginPackageEntity", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<PluginPackageAttribute> pluginPackageAttributeList;
 
     public PluginPackageEntity() {
     }
 
-    public PluginPackageEntity(PluginPackageDataModel pluginPackageDataModel, String name,
-                               String displayName,
-                               String description) {
+    public PluginPackageEntity(PluginPackageDataModel pluginPackageDataModel, String name, String displayName,
+            String description) {
         this(pluginPackageDataModel, name, displayName, description, null);
     }
 
-    public PluginPackageEntity(PluginPackageDataModel pluginPackageDataModel, String name,
-                               String displayName,
-                               String description, List<PluginPackageAttribute> pluginPackageAttributes) {
+    public PluginPackageEntity(PluginPackageDataModel pluginPackageDataModel, String name, String displayName,
+            String description, List<PluginPackageAttribute> pluginPackageAttributes) {
         setPluginPackageDataModel(pluginPackageDataModel);
         this.name = name;
         this.displayName = displayName;
         this.description = description;
-        this.pluginPackageAttributes = pluginPackageAttributes;
+        this.pluginPackageAttributeList = pluginPackageAttributes;
     }
 
     public String getId() {
@@ -100,12 +97,12 @@ public class PluginPackageEntity {
         return description;
     }
 
-    public List<PluginPackageAttribute> getPluginPackageAttributes() {
-        return pluginPackageAttributes;
+    public List<PluginPackageAttribute> getPluginPackageAttributeList() {
+        return pluginPackageAttributeList;
     }
 
-    public void setPluginPackageAttributes(List<PluginPackageAttribute> pluginPackageAttributes) {
-        this.pluginPackageAttributes = pluginPackageAttributes;
+    public void setPluginPackageAttributeList(List<PluginPackageAttribute> pluginPackageAttributes) {
+        this.pluginPackageAttributeList = pluginPackageAttributes;
     }
 
     @Override

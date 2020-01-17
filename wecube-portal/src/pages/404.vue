@@ -14,7 +14,7 @@
 <script>
 export default {
   methods: {}
-};
+}
 </script>
 
 <style lang="scss" scoped>
@@ -23,18 +23,13 @@ body {
 }
 
 .row {
+  display: block;
   text-align: center;
   margin: 60px auto;
   animation-duration: 2s;
   animation-name: slideup;
   animation-delay: 1s;
   animation-fill-mode: backwards;
-}
-
-h1,
-h2,
-p {
-  text-rendering: optimizeLegibility;
 }
 
 h2,

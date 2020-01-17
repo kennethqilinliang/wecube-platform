@@ -1,35 +1,16 @@
 <template>
   <div>
-    <Col span="4" v-for="(menuGroup, index) in menus" :key="menuGroup.id">
+    <Col span="4" v-for="menuGroup in menus" :key="menuGroup.id">
       <List size="small">
         <h6 slot="header">{{ menuGroup.displayName }}</h6>
-        <ListItem
-          v-for="(menu, index) in menuGroup.children"
-          :key="index"
-          style="padding-right: 10px"
-        >
+        <ListItem v-for="(menu, index) in menuGroup.children" :key="index" style="padding-right: 10px">
           <Tooltip
-            :content="menu.displayName"
+            :content="$lang === 'zh-CN' ? menu.localDisplayName : menu.displayName"
             placement="bottom"
             style="width: 100%"
           >
-            <p
-              v-if="menu.menuType === 'package'"
-              style="color: green;width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;"
-            >
-              {{ menu.displayName }}
-            </p>
-            <p
-              v-else
-              style="width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;"
-            >
-              {{ menu.displayName }}
+            <p :class="menu.source === 'SYSTEM' ? 'menu-injection_menu-item' : 'menu-injection_menu-item_new'">
+              {{ $lang === 'zh-CN' ? menu.localDisplayName : menu.displayName }}
             </p>
           </Tooltip>
         </ListItem>
@@ -39,66 +20,80 @@
 </template>
 
 <script>
-import { getMenuInjection } from "@/api/server";
-import { MENUS } from "../../../const/menus.js";
+import { getMenuInjection } from '@/api/server'
+import { MENUS } from '../../../const/menus.js'
 
 export default {
-  name: "menu-injection",
-  data() {
+  name: 'menu-injection',
+  data () {
     return {
       menus: []
-    };
+    }
   },
   watch: {
     pkgId: {
       handler: () => {
-        this.getData();
+        this.getData()
       }
     }
   },
   props: {
     pkgId: {
-      required: true,
-      type: Number
+      required: true
     }
   },
-  created() {
-    this.getData();
+  created () {
+    this.getData()
   },
   methods: {
-    async getData() {
-      let { status, data, message } = await getMenuInjection(this.pkgId);
-      if (status === "OK") {
-        let allCats = [];
+    async getData () {
+      let { status, data } = await getMenuInjection(this.pkgId)
+      if (status === 'OK') {
+        let allCats = []
         data.forEach((_, index) => {
-          if (!_.category && _.code !== "COLLABORATION" && _.code !== "ADMIN") {
-            const found = MENUS.find(m => m.code === _.code);
+          if (!_.category && _.code !== 'COLLABORATION' && _.code !== 'ADMIN') {
+            const found = MENUS.find(m => m.code === _.code)
             allCats.push({
               id: _.id,
               code: _.code,
-              displayName: this.$lang === "zh-CN" ? found.cnName : found.enName,
+              displayName: this.$lang === 'zh-CN' ? found.cnName : found.enName,
               children: []
-            });
+            })
           }
-        });
+        })
 
         this.menus = allCats.map(_ => {
           data.forEach(item => {
-            if (item.category === "" + _.id) {
-              if (item.menuType === "system") {
-                const found = MENUS.find(m => m.code === item.code);
+            if (item.category === '' + _.id) {
+              if (item.source === 'SYSTEM') {
+                const found = MENUS.find(m => m.code === item.code)
                 if (found) {
-                  item.displayName =
-                    this.$lang === "zh-CN" ? found.cnName : found.enName;
+                  item.displayName = this.$lang === 'zh-CN' ? found.cnName : found.enName
                 }
               }
-              _.children.push(item);
+              _.children.push(item)
             }
-          });
-          return _;
-        });
+          })
+          return _
+        })
       }
     }
   }
-};
+}
 </script>
+<style lang="scss" scoped>
+.menu-injection_menu-item {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-injection_menu-item_new {
+  width: 100%;
+  color: green;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

@@ -207,7 +207,7 @@ public class PluginRepositoryIntegrationTest extends DatabaseBasedTest {
                     "attribute_4", "attribute_4_description", "ref");
             PluginPackageAttribute attribute_5 = new PluginPackageAttribute(pluginPackageEntity, attribute_2,
                     "attribute_5", "attribute_5_description", "ref");
-            pluginPackageEntity.setPluginPackageAttributes(
+            pluginPackageEntity.setPluginPackageAttributeList(
                     new ArrayList<>(Arrays.asList(attribute_1, attribute_2, attribute_3, attribute_4, attribute_5)));
         }
     }
@@ -224,7 +224,7 @@ public class PluginRepositoryIntegrationTest extends DatabaseBasedTest {
                     "attribute_4", "attribute_4_description", "ref");
             PluginPackageAttribute attribute_5 = new PluginPackageAttribute(pluginPackageEntity, attribute_2,
                     "attribute_5", "attribute_5_description", "ref");
-            pluginPackageEntity.setPluginPackageAttributes(
+            pluginPackageEntity.setPluginPackageAttributeList(
                     new ArrayList<>(Arrays.asList(attribute_1, attribute_2, attribute_3, attribute_4, attribute_5)));
         }
     }

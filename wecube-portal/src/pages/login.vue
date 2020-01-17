@@ -6,64 +6,69 @@
     </div>
     <br />
     <div class="login-form">
-      <input
-        type="text"
-        placeholder="username"
-        v-model="username"
-        name="user"
-      /><br />
-      <input
+      <Input type="text" placeholder="username" v-model="username" name="user" @on-enter="login" />
+
+      <Input
         type="password"
+        password
         placeholder="password"
         v-model="password"
         name="password"
-        @keyup.enter="login"
-      /><br />
-      <input type="button" value="Login" @click="login" />
+        @on-enter="login"
+        style="margin-top: 20px"
+      />
+      <Button type="primary" long @click="login" :loading="loading" style="margin-top: 20px">
+        Login
+      </Button>
+      <!-- <Button type="success" long>SUBMIT</Button> -->
     </div>
   </div>
 </template>
 <script>
-import { login } from "../api/server";
+import { login } from '../api/server'
 export default {
-  data() {
+  data () {
     return {
-      username: "",
-      password: ""
-    };
+      username: '',
+      password: '',
+      loading: false
+    }
   },
   methods: {
-    async login() {
+    async login () {
+      if (!this.username || !this.password) return
+      this.loading = true
       const payload = {
         username: this.username,
         password: this.password
-      };
-      const { status, message, data } = await login(payload);
-      if (status === "OK") {
-        let session = window.sessionStorage;
-        session.setItem("token", JSON.stringify(data));
-        session.setItem("username", this.username);
-        this.$router.push("/homepage");
       }
+      const { status, data } = await login(payload)
+      if (status === 'OK') {
+        let session = window.sessionStorage
+        session.setItem('token', JSON.stringify(data))
+        session.setItem('username', this.username)
+        this.$router.push('/homepage')
+      }
+      this.loading = false
     },
-    clearSession() {
-      let session = window.sessionStorage;
-      session.removeItem("token");
-      session.removeItem("username");
-      window.needReLoad = true;
+    clearSession () {
+      let session = window.sessionStorage
+      session.removeItem('token')
+      session.removeItem('username')
+      window.needReLoad = true
     }
   },
-  created() {
-    this.clearSession();
+  created () {
+    this.clearSession()
   }
-};
+}
 </script>
 <style scoped>
 .body {
   position: absolute;
   width: 100%;
   height: 100%;
-  background-image: url("../assets/bg.jpg");
+  background-image: url('../assets/bg.jpg');
   background-size: cover;
   -webkit-filter: blur(3px);
   z-index: 0;
@@ -79,7 +84,7 @@ export default {
 .header-login div {
   width: 600px;
   height: 50px;
-  background-image: url("../assets/wecube-logo.png");
+  background-image: url('../assets/wecube-logo.png');
   background-size: contain;
   background-repeat: no-repeat;
 }
@@ -93,60 +98,5 @@ export default {
   padding: 10px;
   z-index: 2;
   text-align: center;
-}
-
-.login-form input[type="text"],
-input[type="password"],
-input[type="button"] {
-  width: 100%;
-  height: 35px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 2px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 400;
-  padding: 4px;
-  margin-top: 10px;
-}
-
-.login-form input[type="button"] {
-  background: #fff;
-  border: 1px solid #fff;
-  cursor: pointer;
-  border-radius: 20px;
-  color: black;
-  font-size: 16px;
-  width: 45%;
-}
-
-.login-form input[type="button"]:hover {
-  opacity: 0.8;
-}
-
-.login-form input[type="button"]:active {
-  opacity: 0.6;
-}
-
-.login-form input[type="text"]:focus {
-  outline: none;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-}
-
-.login-form input[type="password"]:focus {
-  outline: none;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-}
-
-.login-form input[type="button"]:focus {
-  outline: none;
-}
-
-::-webkit-input-placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-::-moz-input-placeholder {
-  color: rgba(255, 255, 255, 0.6);
 }
 </style>

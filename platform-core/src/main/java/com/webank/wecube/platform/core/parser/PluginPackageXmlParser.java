@@ -331,10 +331,17 @@ public class PluginPackageXmlParser {
                     .setCode(getNonNullStringAttribute(pluginPackageMenuNode, "./@code", "Plugin package menu code"));
             pluginPackageMenu.setCategory(
                     getNonNullStringAttribute(pluginPackageMenuNode, "./@cat", "Plugin package menu category"));
-            pluginPackageMenu.setDisplayName(getNonNullStringAttribute(pluginPackageMenuNode, "./@displayName",
-                    "Plugin package menu display name"));
+            String menuDisplayName = getNonNullStringAttribute(pluginPackageMenuNode, "./@displayName",
+                    "Plugin package menu display name");
+            pluginPackageMenu.setDisplayName(menuDisplayName);
+            String localDisplayName = getStringAttribute(pluginPackageMenuNode, "./@localDisplayName");
+            if (StringUtils.isNotBlank(localDisplayName)) {
+                pluginPackageMenu.setLocalDisplayName(localDisplayName);
+            } else {
+                pluginPackageMenu.setLocalDisplayName(menuDisplayName);
+            }
             pluginPackageMenu.setPath(pluginPackageMenuNode.getTextContent());
-            pluginPackageMenu.setSource(MenuItem.Source.PLUGIN.name());
+            pluginPackageMenu.setSource(pluginPackage.getId());
 
             pluginPackageMenu.setPluginPackage(pluginPackage);
 
@@ -406,7 +413,6 @@ public class PluginPackageXmlParser {
             if (StringUtils.isNotBlank(registerName)) {
                 pluginConfig.setRegisterName(registerName);
             }
-
             NodeList pluginConfigInterfaceNodes = xPathEvaluator.getNodeList("./interface", pluginConfigNode);
             if (pluginConfigInterfaceNodes != null && pluginConfigInterfaceNodes.getLength() > 0) {
                 pluginConfig.setInterfaces(

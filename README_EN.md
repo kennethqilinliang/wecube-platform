@@ -1,10 +1,25 @@
 # WeCube
+<p align="left">
+    <a href="https://opensource.org/licenses/Apache-2.0" alt="License">
+        <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" /></a>
+    <a href="https://github.com/WeBankPartners/wecube-platform/tree/v2.0.0" alt="Tag">
+        <img src="https://img.shields.io/github/v/tag/WeBankPartners/wecube-platform.svg" /></a>
+    <a href="#" alt="Code Size">
+        <img src="https://img.shields.io/github/languages/code-size/WeBankPartners/wecube-platform.svg" /></a>
+    <a href="#" alt="Java">
+        <img src="https://img.shields.io/badge/language-java-orange.svg" /></a>
+    <a href="#" alt="Vue">
+        <img src="https://img.shields.io/badge/language-vue-green.svg" /></a>
+    <a href="https://github.com/WeBankPartners/wecube-platform/graphs/contributors" alt="Contributors">
+        <img src="https://img.shields.io/github/contributors/WeBankPartners/wecube-platform" /></a>
+    <a href="https://github.com/WeBankPartners/wecube-platform/pulse" alt="Activity">
+        <img src="https://img.shields.io/github/commit-activity/m/WeBankPartners/wecube-platform" /></a>
+    <a href="https://circleci.com/gh/WeBankPartners/wecube-platform/tree/master">
+        <img src="https://img.shields.io/circleci/project/github/WeBankPartners/wecube-platform/master"
+            alt="build status"></a>
+</p>
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![](https://img.shields.io/badge/language-java-orange.svg)
-![](https://img.shields.io/badge/language-vue-green.svg)
-
-[中文](README.md) / English
+English / [中文](README.md)
 
 ## Introduction
 WeCube is an open source, one-stop tool for architecture management and IT operation, which aims to simplify the IT management of distributed architecture. Its features can be easily extended by plugins.
@@ -69,39 +84,42 @@ WeCube Version 2.0 is under active development and will come soon.
 The main menu of WeCube matches its design concept, including Workbench, Expectation, Execution, Watching, Wisdom, Equilibration, Workflow and System.
 
 - System
-  - CMDB model design: support customization and graphic visualization.
-  - authorization: row-based data permission control for CRUD operations. For example, DBA can only operate on DB hosts instead of application hosts in case that all hosts share one single CI type.  
-  - system parameters
+  - System parameters: All the necessary parameters used during the WeCube Platform running can be managed.
+  - Authorization: Users, Roles, and Menus are managed in this section, also the mapping between users, roles and menus.
+  - Resources: Manage resources provided by WeCube, such as container hosts and instances running on the hosts.
 
 - Workflow
-  - plugin registration: to upload plugin packages and create their runtime environments in containers. 
-  - task orchestration: to design workflows to finish automated or semi-automated tasks, such as task orchestration to create VPC, subnet and virtual machines on public cloud. Each node in the workflow is associated with a plugin for execution.
-  - service channel
+  - Plugin registration: Select the plugin package to upload. The plugin package needs to declare the plugin's dependencies, required menus, data models, system parameters, authorization settings, and resources. After registration, the plugin runs through the container, multiple instances supported, and you can view the log of the plugin operation. Select the plugin service, and associate the CMDB data model attribute value with the parameters.
+  - Task orchestration: to design workflows to finish automated or semi-automated tasks, such as task orchestration to create VPC, subnet and virtual machines on the public cloud. Each node in the workflow is associated with a plugin for execution.
 
-- Expectation
-  - data center design: to create a plan and to design the sturcture of data centers
-  - data center resource plan: to instanciate a data center design and plan actual resources for a specific data center
-  - application architecture design: to design logical architecture of applications
-  - application deployment design: to design the deployment architectural view and trigger deployment for applications
-  - CI data query and management: to query and manage data for a single CI type through the graph of CI model
-  - CI integrated query: to configure queries involving multiple CI types, for example to find out all hosts used by a specific application
-  - enumeration query and danagement
+- Expectation(WeCMDB plugin)
+  - Data center design: to create a plan and to design the structure of data centers
+  - Data center resource plan: to instantiate a data center design and plan actual resources for a specific data center
+  - Application architecture design: to design logical architecture of applications
+  - Application deployment design: to design the deployment architectural view and trigger deployment for applications
+  - CI data query and management: to query and manage data for a single CI type through the graph of the CI model
+  - CI integrated query: to configure queries involving multiple CI types, for example, to find out all hosts used by a specific application
+  - Enumeration query and management
 
 - Execution
-  - artifact management: to manage deployment packages for applications. Customization of configuration file and value substitution rules is supported to eliminate manual intervention.
-  - application deployment: to view deployment history, to skip or retry deployment tasks.
-  - batch execution: to execute simple operation tasks in a selected scope of targets. 
-  - high risk commands: to define high risk commands, so they will be blocked or extra approval process will be raised.
-  - task orchestration execution: to execute complicated operations with predefined workflow and plugins.
+  - Task orchestration execution: to execute complicated operations with predefined workflow and plugins. Canary release supported.
+  - Artifacts(Artifacts plugin): to manage deployment packages for applications. Customization of the configuration file and value substitution rules is supported to eliminate manual intervention.
+  - Batch execution: to execute simple operation tasks in a selected scope of targets. 
 
-- Tasks (2nd half of 2019)
 
-- Watching (2nd half of 2019)
+- Tasks (Service-Management plugin)
+  - Template management: service catalog management, service request template management.
+  - Service management: service request management, task management.
 
-- Equilibration (2nd half of 2019)
+- Watching (Open-Monitor plugin)
+  - Agent management: registration, start, stop;
+  - Data management: Provide data collection configuration, data query, and other functions;
+  - Alarm management: Provides functions such as threshold configuration, log monitoring, and alarm triggering;
+  - View management: Provide graphic configuration and custom view functions;
 
-- Wisdom (2nd half of 2019)
+- Equilibration (On Planning)
 
+- Wisdom (On Planning)
 
 ## Quick Start
 WeCube is using containerized deployment.

@@ -1,10 +1,14 @@
 package com.webank.wecube.platform.core.controller;
 
+import com.webank.wecube.platform.core.commons.WecubeCoreException;
 import com.webank.wecube.platform.core.domain.JsonResponse;
+import com.webank.wecube.platform.core.dto.PluginPackageAttributeDto;
 import com.webank.wecube.platform.core.dto.PluginPackageDataModelDto;
 import com.webank.wecube.platform.core.service.PluginPackageDataModelServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/v1")
@@ -36,8 +40,7 @@ public class PluginPackageDataModelController {
     @ResponseBody
     public JsonResponse getRefByIdInfoByPackageNameAndEntityName(
             @PathVariable(value = "plugin-package-name") String packageName,
-            @PathVariable(value = "entity-name") String entityName
-    ) {
+            @PathVariable(value = "entity-name") String entityName) {
         return JsonResponse.okayWithData(pluginPackageDataModelService.getRefByInfo(packageName, entityName));
     }
 
@@ -48,7 +51,23 @@ public class PluginPackageDataModelController {
 
     @GetMapping("/models/{new-data-model-id}/compare/{old-data-model-id}")
     @ResponseBody
-    public JsonResponse compareTwoDataModels(@PathVariable("new-data-model-id") String newDataModelId, @PathVariable("old-data-model-id") String oldDataModelId) {
-        return JsonResponse.okayWithData(pluginPackageDataModelService.compareDataModels(newDataModelId, oldDataModelId));
+    public JsonResponse compareTwoDataModels(@PathVariable("new-data-model-id") String newDataModelId,
+            @PathVariable("old-data-model-id") String oldDataModelId) {
+        return JsonResponse
+                .okayWithData(pluginPackageDataModelService.compareDataModels(newDataModelId, oldDataModelId));
+    }
+
+    @GetMapping("/models/package/{plugin-package-name}/entity/{entity-name}/attributes")
+    @ResponseBody
+    public JsonResponse getAttributeInfoByPackageNameAndEntityName(
+            @PathVariable(value = "plugin-package-name") String packageName,
+            @PathVariable(value = "entity-name") String entityName) {
+        List<PluginPackageAttributeDto> result;
+        try {
+            result = pluginPackageDataModelService.entityView(packageName, entityName);
+        } catch (WecubeCoreException ex) {
+            return JsonResponse.error(ex.getMessage());
+        }
+        return JsonResponse.okayWithData(result);
     }
 }

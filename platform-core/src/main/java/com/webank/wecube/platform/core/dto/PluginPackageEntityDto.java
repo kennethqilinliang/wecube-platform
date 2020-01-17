@@ -1,6 +1,7 @@
 package com.webank.wecube.platform.core.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.webank.wecube.platform.core.domain.plugin.PluginPackageAttribute;
 import com.webank.wecube.platform.core.domain.plugin.PluginPackageDataModel;
 import com.webank.wecube.platform.core.domain.plugin.PluginPackageEntity;
@@ -10,6 +11,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.*;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PluginPackageEntityDto {
     private String id;
     private String packageName;
@@ -46,8 +48,8 @@ public class PluginPackageEntityDto {
         pluginPackageEntityDto.setDisplayName(pluginPackageEntity.getDisplayName());
         pluginPackageEntityDto.setDescription(pluginPackageEntity.getDescription());
         pluginPackageEntityDto.setDataModelVersion(pluginPackageEntity.getPluginPackageDataModel().getVersion());
-        if (pluginPackageEntity.getPluginPackageAttributes() != null) {
-            pluginPackageEntity.getPluginPackageAttributes()
+        if (pluginPackageEntity.getPluginPackageAttributeList() != null) {
+            pluginPackageEntity.getPluginPackageAttributeList()
                     .forEach(pluginPackageAttribute -> pluginPackageEntityDto.attributes
                             .add(PluginPackageAttributeDto.fromDomain(pluginPackageAttribute)));
         }
@@ -61,14 +63,14 @@ public class PluginPackageEntityDto {
      */
     public static PluginPackageEntity toDomain(PluginPackageEntityDto pluginPackageEntityDto, PluginPackageDataModel dataModel) {
 
-        PluginPackageEntity pluginPackageEntity = new PluginPackageEntity(dataModel, pluginPackageEntityDto.getName(), pluginPackageEntityDto. getDisplayName(), pluginPackageEntityDto.getDescription());
+        PluginPackageEntity pluginPackageEntity = new PluginPackageEntity(dataModel, pluginPackageEntityDto.getName(), pluginPackageEntityDto.getDisplayName(), pluginPackageEntityDto.getDescription());
 
         if (pluginPackageEntityDto.getAttributes() != null) {
             List<PluginPackageAttribute> pluginPackageAttributeList = new ArrayList<>();
             for (PluginPackageAttributeDto pluginPackageAttributeDto : pluginPackageEntityDto.getAttributes()) {
                 pluginPackageAttributeList.add(PluginPackageAttributeDto.toDomain(pluginPackageAttributeDto, null, pluginPackageEntity));
             }
-            pluginPackageEntity.setPluginPackageAttributes(pluginPackageAttributeList);
+            pluginPackageEntity.setPluginPackageAttributeList(pluginPackageAttributeList);
         }
 
         return pluginPackageEntity;
@@ -244,7 +246,8 @@ public class PluginPackageEntityDto {
                     .toHashCode();
         }
     }
-    public static class PluginPackageEntityKey{
+
+    public static class PluginPackageEntityKey {
         String packageName;
         String entityName;
 

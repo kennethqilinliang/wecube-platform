@@ -1,8 +1,16 @@
 package com.webank.wecube.platform.core.service.datamodel;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import com.webank.wecube.platform.core.commons.ApplicationProperties;
+import com.webank.wecube.platform.core.commons.WecubeCoreException;
+import com.webank.wecube.platform.core.domain.plugin.PluginPackageDataModel;
+import com.webank.wecube.platform.core.domain.plugin.PluginPackageEntity;
 import com.webank.wecube.platform.core.dto.CommonResponseDto;
+import com.webank.wecube.platform.core.dto.EntityDto;
 import com.webank.wecube.platform.core.dto.UrlToResponseDto;
+import com.webank.wecube.platform.core.jpa.PluginPackageDataModelRepository;
+import com.webank.wecube.platform.core.jpa.PluginPackageEntityRepository;
 import com.webank.wecube.platform.core.model.datamodel.DataModelExpressionToRootData;
 import com.webank.wecube.platform.core.parser.datamodel.DataModelExpressionParser;
 import com.webank.wecube.platform.core.parser.datamodel.antlr4.DataModelParser;
@@ -11,6 +19,7 @@ import com.webank.wecube.platform.core.support.datamodel.dto.DataFlowTreeDto;
 import com.webank.wecube.platform.core.support.datamodel.dto.DataModelExpressionDto;
 import com.webank.wecube.platform.core.support.datamodel.dto.TreeNode;
 import com.webank.wecube.platform.core.support.datamodel.dto.WriteBackTargetDto;
+import com.webank.wecube.platform.core.utils.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +29,11 @@ import java.util.*;
 
 @Service
 public class ExpressionServiceImpl implements ExpressionService {
+    @Autowired
+    private PluginPackageEntityRepository pluginPackageEntityRepository;
+    @Autowired
+    private PluginPackageDataModelRepository pluginPackageDataModelRepository;
+
     private ApplicationProperties applicationProperties;
     private static final Logger logger = LoggerFactory.getLogger(ExpressionServiceImpl.class);
     private DataModelServiceStub dataModelServiceStub;
@@ -109,13 +123,12 @@ public class ExpressionServiceImpl implements ExpressionService {
         String requestPackageName;
         String requestEntityName;
         Map<String, Object> requestParamMap;
+        List<Object> extractedVisualField;
         switch (expressionDto.getDataModelExpressionOpType()) {
             case ENTITY_FETCH:
                 requestPackageName = entity.pkg().getText();
                 requestEntityName = entity.ety().getText();
 
-                // tree node
-                dataFlowTreeDto.setTreeNode(new TreeNode(requestPackageName, requestEntityName, rootIdData, null, null));
 
                 // request
                 requestParamMap = dataModelServiceStub.generateGetUrlParamMap(
@@ -129,6 +142,11 @@ public class ExpressionServiceImpl implements ExpressionService {
                 expressionDto.getRequestUrlStack().add(Collections.singleton(urlToResponseDto.getRequestUrl()));
                 expressionDto.getJsonResponseStack().add(Collections.singletonList(urlToResponseDto.getResponseDto()));
 
+                // tree node
+                // when given root id data, the found data size should always be one
+                extractedVisualField = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.VISUAL_FIELD);
+                dataFlowTreeDto.setTreeNode(new TreeNode(requestPackageName, requestEntityName, rootIdData, extractedVisualField.get(0), null, null));
+
                 String fetchAttributeName = expressionDto.getOpFetch().attr().getText();
                 List<Object> finalResult = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), fetchAttributeName);
 
@@ -137,9 +155,6 @@ public class ExpressionServiceImpl implements ExpressionService {
             case REF_TO:
                 String firstRequestPackageName = expressionDto.getFwdNode().entity().pkg().getText();
                 String firstRequestEntityName = expressionDto.getFwdNode().entity().ety().getText();
-
-                // first tree node
-                dataFlowTreeDto.setTreeNode(new TreeNode(firstRequestPackageName, firstRequestEntityName, rootIdData, null, new ArrayList<>()));
 
                 // first request
                 Map<String, Object> firstRequestParamMap = dataModelServiceStub.generateGetUrlParamMap(
@@ -151,6 +166,11 @@ public class ExpressionServiceImpl implements ExpressionService {
                 urlToResponseDto = dataModelServiceStub.initiateGetRequest(DataModelServiceStub.CHAIN_REQUEST_URL, firstRequestParamMap);
                 expressionDto.getRequestUrlStack().add(Collections.singleton(urlToResponseDto.getRequestUrl()));
                 expressionDto.getJsonResponseStack().add(Collections.singletonList(urlToResponseDto.getResponseDto()));
+
+                // first tree node
+                // when given root id data, the found data size should always be one
+                extractedVisualField = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.VISUAL_FIELD);
+                dataFlowTreeDto.setTreeNode(new TreeNode(firstRequestPackageName, firstRequestEntityName, rootIdData, extractedVisualField.get(0), null, new ArrayList<>()));
 
                 // second request
                 // fwdNode returned data is the second request's id data
@@ -172,7 +192,9 @@ public class ExpressionServiceImpl implements ExpressionService {
                     responseDtoList.add(secondRequestUrlToResponseDto.getResponseDto());
 
                     // set child tree node and update parent tree node
-                    TreeNode childNode = new TreeNode(secondRequestPackageName, secondRequestEntityName, secondRequestIdData, dataFlowTreeDto.getTreeNode(), new ArrayList<>());
+                    // when the operation is ref to, the found data size should always be one
+                    extractedVisualField = dataModelServiceStub.extractValueFromResponse(secondRequestUrlToResponseDto.getResponseDto(), DataModelServiceStub.VISUAL_FIELD);
+                    TreeNode childNode = new TreeNode(secondRequestPackageName, secondRequestEntityName, secondRequestIdData, extractedVisualField.get(0), dataFlowTreeDto.getTreeNode(), new ArrayList<>());
                     dataFlowTreeDto.getTreeNode().getChildren().add(childNode);
                     dataFlowTreeDto.getAnchorTreeNodeList().add(childNode);
                 }
@@ -180,15 +202,34 @@ public class ExpressionServiceImpl implements ExpressionService {
                 expressionDto.getJsonResponseStack().add(responseDtoList);
                 break;
             case REF_BY:
+
+                // first TreeNode, which is the entity, need to initiate the request to get the visual field
+                // request to get visual field
+                requestPackageName = entity.pkg().getText();
+                requestEntityName = entity.ety().getText();
+
+                requestParamMap = dataModelServiceStub.generateGetUrlParamMap(
+                        this.applicationProperties.getGatewayUrl(),
+                        requestPackageName,
+                        requestEntityName,
+                        DataModelServiceStub.UNIQUE_IDENTIFIER,
+                        rootIdData);
+
+                urlToResponseDto = dataModelServiceStub.initiateGetRequest(DataModelServiceStub.CHAIN_REQUEST_URL, requestParamMap);
+                expressionDto.getRequestUrlStack().add(Collections.singleton(urlToResponseDto.getRequestUrl()));
+                expressionDto.getJsonResponseStack().add(Collections.singletonList(urlToResponseDto.getResponseDto()));
+
+                // first tree node
+                // when given root id data, the found data size should always be one
+                extractedVisualField = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.VISUAL_FIELD);
+                dataFlowTreeDto.setTreeNode(new TreeNode(requestPackageName, requestEntityName, rootIdData, extractedVisualField.get(0), null, new ArrayList<>()));
+
+
+                // refBy request
                 DataModelParser.Bwd_nodeContext bwdNode = expressionDto.getBwdNode();
                 requestPackageName = bwdNode.entity().pkg().getText();
                 requestEntityName = bwdNode.entity().ety().getText();
                 String requestAttributeName = bwdNode.attr().getText();
-
-                // first TreeNode, which is the entity
-                dataFlowTreeDto.setTreeNode(new TreeNode(entity.pkg().getText(), entity.ety().getText(), rootIdData, null, new ArrayList<>()));
-
-                // refBy request
                 requestParamMap = dataModelServiceStub.generateGetUrlParamMap(
                         this.applicationProperties.getGatewayUrl(),
                         requestPackageName,
@@ -201,8 +242,12 @@ public class ExpressionServiceImpl implements ExpressionService {
 
                 // second TreeNode, might be multiple
                 List<Object> refByDataIdList = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.UNIQUE_IDENTIFIER);
-                refByDataIdList.forEach(id -> {
-                    TreeNode childNode = new TreeNode(requestPackageName, requestEntityName, id, dataFlowTreeDto.getTreeNode(), new ArrayList<>());
+                List<Object> refByDataVisualFieldList = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.VISUAL_FIELD);
+                Map<Object, Object> idToVisualFieldMap = CollectionUtils.zipToMap(refByDataIdList, refByDataVisualFieldList);
+                String finalRequestPackageName = requestPackageName;
+                String finalRequestEntityName = requestEntityName;
+                idToVisualFieldMap.forEach((id, visualField) -> {
+                    TreeNode childNode = new TreeNode(finalRequestPackageName, finalRequestEntityName, id, visualField, dataFlowTreeDto.getTreeNode(), new ArrayList<>());
                     dataFlowTreeDto.getTreeNode().getChildren().add(childNode);
                     dataFlowTreeDto.getAnchorTreeNodeList().add(childNode);
                 });
@@ -262,8 +307,8 @@ public class ExpressionServiceImpl implements ExpressionService {
                         List<TreeNode> parentTreeNodeList = new ArrayList<>();
                         String finalLastRequestPackageName = lastRequestPackageName;
                         String finalLastRequestEntityName = lastRequestEntityName;
-                        Objects.requireNonNull(parentIdList).forEach(id -> {
-                            TreeNode parentNode = findParentNode(dataFlowTreeDto.getAnchorTreeNodeList(), finalLastRequestPackageName, finalLastRequestEntityName, id);
+                        Objects.requireNonNull(parentIdList).forEach(parentId -> {
+                            TreeNode parentNode = findParentNode(dataFlowTreeDto.getAnchorTreeNodeList(), finalLastRequestPackageName, finalLastRequestEntityName, parentId);
                             Objects.requireNonNull(parentNode, "Cannot find parent node from given last request info");
                             parentTreeNodeList.add(parentNode);
                         });
@@ -280,11 +325,13 @@ public class ExpressionServiceImpl implements ExpressionService {
 
                         // set child tree node and update parent tree node
                         List<Object> responseIdList = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.UNIQUE_IDENTIFIER);
-                        responseIdList.forEach(id -> {
+                        List<Object> responseVisualFieldList = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.VISUAL_FIELD);
+                        Map<Object, Object> idToVisualFieldMap = CollectionUtils.zipToMap(responseIdList, responseVisualFieldList);
+                        idToVisualFieldMap.forEach((id, visualField) -> {
                             // the list's size is one due to it's referenceTo operation
                             parentTreeNodeList.forEach(parentNode -> {
                                 // bind childNode which is generated by one id to multiple parents
-                                TreeNode childNode = new TreeNode(requestPackageName, requestEntityName, id, parentNode, new ArrayList<>());
+                                TreeNode childNode = new TreeNode(requestPackageName, requestEntityName, id, visualField, parentNode, new ArrayList<>());
                                 parentNode.getChildren().add(childNode);
                                 newAnchorTreeNodeList.add(childNode);
                             });
@@ -324,8 +371,10 @@ public class ExpressionServiceImpl implements ExpressionService {
 
                         // set child tree node and update parent tree node
                         List<Object> responseIdList = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.UNIQUE_IDENTIFIER);
-                        responseIdList.forEach(id -> {
-                            TreeNode childNode = new TreeNode(requestPackageName, requestEntityName, id, parentNode, new ArrayList<>());
+                        List<Object> responseVisualFieldList = dataModelServiceStub.extractValueFromResponse(urlToResponseDto.getResponseDto(), DataModelServiceStub.VISUAL_FIELD);
+                        Map<Object, Object> idToVisualFieldMap = CollectionUtils.zipToMap(responseIdList, responseVisualFieldList);
+                        idToVisualFieldMap.forEach((id, visualField) -> {
+                            TreeNode childNode = new TreeNode(requestPackageName, requestEntityName, id, visualField, parentNode, new ArrayList<>());
                             parentNode.getChildren().add(childNode);
                             newAnchorTreeNodeList.add(childNode);
                         });
@@ -363,7 +412,9 @@ public class ExpressionServiceImpl implements ExpressionService {
      */
     private TreeNode findParentNode(List<TreeNode> anchorTreeNodeList, String lastRequestPackageName, String lastRequestEntityName, Object rootIdData) {
         for (TreeNode node : anchorTreeNodeList) {
-            if (node.equals(new TreeNode(lastRequestPackageName, lastRequestEntityName, rootIdData))) return node;
+            if (node.equals(new TreeNode(lastRequestPackageName, lastRequestEntityName, rootIdData))) {
+                return node;
+            }
         }
         return null;
     }
@@ -421,5 +472,108 @@ public class ExpressionServiceImpl implements ExpressionService {
         }
         String writeBackAttr = Objects.requireNonNull(finalFetchDto.getOpFetch()).attr().getText();
         return new WriteBackTargetDto(lastRequestResponse, writeBackPackageName, writeBackEntityName, writeBackAttr);
+    }
+
+    @Override
+    public List<EntityDto> getAllEntities(String dataModelExpression) {
+        if (dataModelExpression.isEmpty() || !dataModelExpression.contains(":")) {
+            throw new WecubeCoreException(String.format("Illegal data model expression[%s]", dataModelExpression));
+        }
+
+        Iterable<String> split = Splitter.onPattern("([>~])").split(dataModelExpression);
+        Iterable<String> firstSection = Splitter.onPattern("([:.])").splitToList((split.iterator().next()));
+        List<String> firstSectionStrings = new ArrayList<String>();
+        Iterator<String> firstSectionStringIterator = firstSection.iterator();
+        while (firstSectionStringIterator.hasNext()) {
+            firstSectionStrings.add(firstSectionStringIterator.next());
+        }
+        if (firstSectionStrings.size() < 2) {
+            throw new WecubeCoreException(String.format("Illegal data model expression[%s]", dataModelExpression));
+        }
+
+        Queue<DataModelExpressionDto> expressionDtoQueue = new DataModelExpressionParser()
+                .parseAll(dataModelExpression);
+
+        List<EntityDto> entityDtos = new ArrayList<EntityDto>();
+        DataModelExpressionDto dataModelExpressionDtoFirst = expressionDtoQueue.poll();
+        entityDtos = resolveFirstLinkReturnEntities(dataModelExpressionDtoFirst);
+
+        for (int i = expressionDtoQueue.size(); i > 1; i--) {
+            DataModelExpressionDto dataModelExpressionDto = expressionDtoQueue.poll();
+            EntityDto entityDto = resolveLinkReturnEntity(dataModelExpressionDto);
+            if (null != entityDto) {
+                entityDtos.add(entityDto);
+            }
+        }
+
+        entityDtos.forEach(entity -> {
+            Optional<PluginPackageDataModel> dataModelOptional = pluginPackageDataModelRepository
+                    .findLatestDataModelByPackageName(entity.getPackageName());
+            if (dataModelOptional.isPresent()) {
+                Optional<PluginPackageEntity> entityOptional = pluginPackageEntityRepository
+                        .findByPackageNameAndNameAndDataModelVersion(entity.getPackageName(), entity.getEntityName(),
+                                dataModelOptional.get().getVersion());
+                if (entityOptional.isPresent()) {
+                    entity.setAttributes(entityOptional.get().getPluginPackageAttributeList());
+                }
+            }
+        });
+
+        return entityDtos;
+    }
+
+    private EntityDto buildEntityForEntityFetch(DataModelExpressionDto expressionDto) {
+        DataModelParser.EntityContext entity = expressionDto.getEntity();
+        return new EntityDto(entity.pkg().getText(), entity.ety().getText());
+    }
+
+    private EntityDto resolveLinkReturnEntity(DataModelExpressionDto expressionDto) {
+        switch (expressionDto.getDataModelExpressionOpType()) {
+            case REF_TO:
+                return new EntityDto(expressionDto.getEntity().pkg().getText(), expressionDto.getEntity().ety().getText());
+            case REF_BY:
+                DataModelParser.Bwd_nodeContext bwdNode = expressionDto.getBwdNode();
+                return new EntityDto(bwdNode.entity().pkg().getText(), bwdNode.entity().ety().getText());
+            default:
+                break;
+        }
+        return null;
+    }
+
+    private List<EntityDto> resolveFirstLinkReturnEntities(DataModelExpressionDto expressionDto) {
+        switch (expressionDto.getDataModelExpressionOpType()) {
+            case ENTITY_FETCH:
+                EntityDto entityDto = buildEntityForEntityFetch(expressionDto);
+                return Lists.newArrayList(entityDto);
+            case REF_TO:
+                EntityDto firstEntityDtoInRefToCase = buildForwardNodeEntityForRefTo(expressionDto);
+                EntityDto secondEntityDtoInRefToCase = buildEntityForRefTo(expressionDto);
+                return Lists.newArrayList(firstEntityDtoInRefToCase, secondEntityDtoInRefToCase);
+            case REF_BY:
+                EntityDto firstEntityDtoInRefByCase = buildEntityForRefBy(expressionDto);
+                EntityDto secondEntityDtoInRefByCase = buildBackwardNodeEntityForRefBy(expressionDto);
+                return Lists.newArrayList(firstEntityDtoInRefByCase, secondEntityDtoInRefByCase);
+            default:
+                break;
+        }
+        return null;
+    }
+
+    private EntityDto buildForwardNodeEntityForRefTo(DataModelExpressionDto expressionDto) {
+        return new EntityDto(expressionDto.getFwdNode().entity().pkg().getText(),
+                expressionDto.getFwdNode().entity().ety().getText());
+    }
+
+    private EntityDto buildEntityForRefTo(DataModelExpressionDto expressionDto) {
+        return new EntityDto(expressionDto.getEntity().pkg().getText(), expressionDto.getEntity().ety().getText());
+    }
+
+    private EntityDto buildBackwardNodeEntityForRefBy(DataModelExpressionDto expressionDto) {
+        return new EntityDto(expressionDto.getBwdNode().entity().pkg().getText(),
+                expressionDto.getBwdNode().entity().ety().getText());
+    }
+
+    private EntityDto buildEntityForRefBy(DataModelExpressionDto expressionDto) {
+        return new EntityDto(expressionDto.getEntity().pkg().getText(), expressionDto.getEntity().ety().getText());
     }
 }

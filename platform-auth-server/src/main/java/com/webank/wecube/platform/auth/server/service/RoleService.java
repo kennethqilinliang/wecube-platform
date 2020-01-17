@@ -1,59 +1,58 @@
 package com.webank.wecube.platform.auth.server.service;
 
-import java.util.List;
-import java.util.Optional;
-
+import com.webank.wecube.platform.auth.server.common.util.ValidateUtils;
+import com.webank.wecube.platform.auth.server.dto.CreateRoleDto;
+import com.webank.wecube.platform.auth.server.entity.SysRoleEntity;
+import com.webank.wecube.platform.auth.server.repository.RoleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.webank.wecube.platform.auth.server.dto.CreateRoleDto;
-import com.webank.wecube.platform.auth.server.dto.CreateUserDto;
-import com.webank.wecube.platform.auth.server.entity.SysRoleEntity;
-import com.webank.wecube.platform.auth.server.entity.SysUserEntity;
-import com.webank.wecube.platform.auth.server.repository.RoleRepository;
-import com.webank.wecube.platform.auth.server.repository.UserRepository;
-import com.webank.wecube.platform.auth.server.service.impl.SubSystemInfoDataServiceImpl;
+import java.util.List;
+import java.util.Optional;
 
 @Service("roleService")
 public class RoleService {
 
-	private static final Logger log = LoggerFactory.getLogger(RoleService.class);
+    private static final Logger log = LoggerFactory.getLogger(RoleService.class);
+    @Autowired
+    PasswordEncoder passwordEncoder;
+    @Autowired
+    private RoleRepository roleRepository;
 
-	@Autowired
-	private RoleRepository roleRepository;
+    public SysRoleEntity create(CreateRoleDto createRoleDto) throws Exception {
+        if (!ValidateUtils.isEmailValid(createRoleDto.getEmail())) {
+            throw new Exception("Please input the correct E-mail address");
+        }
 
-	@Autowired
-	PasswordEncoder passwordEncoder;
+        SysRoleEntity existedRole = roleRepository.findOneByName(createRoleDto.getName());
 
-	public SysRoleEntity create(CreateRoleDto createRoleDto) throws Exception {
+        log.info("existUser = {}", existedRole);
+        if (!(null == existedRole)) {
+            throw new Exception(String.format("Role [%s] already existed", createRoleDto.getName()));
+        }
 
-		SysRoleEntity existedRole = roleRepository.findOneByName(createRoleDto.getName());
+        SysRoleEntity role = new SysRoleEntity(createRoleDto.getName(), createRoleDto.getDisplayName(), createRoleDto.getEmail());
+        roleRepository.saveAndFlush(role);
 
-		log.info("existUser = {}", existedRole);
-		if (!(null == existedRole))
-			throw new Exception(String.format("Role [%s] already existed", createRoleDto.getName()));
+        return role;
+    }
 
-		SysRoleEntity role = new SysRoleEntity(createRoleDto.getName(), createRoleDto.getDisplayName());
-		roleRepository.saveAndFlush(role);
+    public List<SysRoleEntity> retrieve() {
+        return roleRepository.findAll();
+    }
 
-		return role;
-	}
+    public void delete(String roleId) {
+        roleRepository.deleteById(roleId);
+    }
 
-	public List<SysRoleEntity> retrieve() {
-		return roleRepository.findAll();
-	}
-
-	public void delete(Long id) {
-		roleRepository.deleteById(id);
-	}
-
-	public SysRoleEntity getRoleByIdIfExisted(Long roleId) throws Exception {
-		Optional<SysRoleEntity> roleEntityOptional = roleRepository.findById(roleId);
-		if (!roleEntityOptional.isPresent())
-			throw new Exception(String.format("Role ID [%d] does not exist", roleId));
-		return roleEntityOptional.get();
-	}
+    public SysRoleEntity getRoleByIdIfExisted(String roleId) throws Exception {
+        Optional<SysRoleEntity> roleEntityOptional = roleRepository.findById(roleId);
+        if (!roleEntityOptional.isPresent()) {
+            throw new Exception(String.format("Role ID [%s] does not exist", roleId));
+        }
+        return roleEntityOptional.get();
+    }
 }

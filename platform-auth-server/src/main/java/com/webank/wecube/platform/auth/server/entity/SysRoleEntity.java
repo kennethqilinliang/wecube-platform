@@ -1,56 +1,71 @@
 package com.webank.wecube.platform.auth.server.entity;
 
+import org.hibernate.annotations.GenericGenerator;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.validation.constraints.Email;
 
 @Entity
 @Table(name = "AUTH_SYS_ROLE")
 public class SysRoleEntity extends AbstractTraceableEntity {
 
-	@Id
-	@GeneratedValue
-	@Column(name = "ID")
-	private Long id;
+    @Id
+    @GenericGenerator(name = "jpa-uuid", strategy = "uuid")
+    @GeneratedValue(generator = "jpa-uuid")
+    @Column(name = "ID")
+    private String id;
 
-	@Column(name = "NAME")
-	private String name;
+    @Column(name = "NAME", unique = true)
+    private String name;
 
-	@Column(name = "DISPLAY_NAME")
-	private String displayName;
+    @Column(name = "DISPLAY_NAME")
+    private String displayName;
 
-	public SysRoleEntity() {
-	}
+    @Column(name = "EMAIL")
+    private String email;
 
-	public SysRoleEntity(String name, String displayName) {
-		this.setName(name);
-		this.setDisplayName(displayName);
-	}
+    public SysRoleEntity() {
+    }
 
-	public Long getId() {
-		return id;
-	}
+    public SysRoleEntity(String name, String displayName, String email) {
+        this.setName(name);
+        this.setDisplayName(displayName);
+        this.setEmail(email);
+    }
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    public String getId() {
+        return id;
+    }
 
-	public String getName() {
-		return name;
-	}
+    public void setId(String id) {
+        this.id = id;
+    }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public String getDisplayName() {
-		return displayName;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public void setDisplayName(String displayName) {
-		this.displayName = displayName;
-	}
+    public String getDisplayName() {
+        return displayName;
+    }
 
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
 }

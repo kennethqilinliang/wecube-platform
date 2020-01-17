@@ -1,17 +1,7 @@
 <template>
   <div>
-    <Select
-      v-if="!isGroup"
-      :value="value"
-      :multiple="isMultiple"
-      filterable
-      clearable
-      @on-change="changeValue"
-      @on-open-change="getFilterRulesOptions"
-    >
-      <Option v-for="item in opts" :value="item.value" :key="item.value">{{
-        item.label
-      }}</Option>
+    <Select v-if="!isGroup" :value="value" :multiple="isMultiple" filterable clearable @on-change="changeValue">
+      <Option v-for="item in opts" :value="item.value" :key="item.value">{{ item.label }}</Option>
     </Select>
     <Select
       v-else
@@ -20,29 +10,18 @@
       filterable
       clearable
       @on-change="changeValue"
-      @on-open-change="getFilterRulesOptions"
       :max-tag-count="maxTags"
     >
-      <OptionGroup
-        v-for="(group, index) in opts"
-        :key="index"
-        :label="group.label"
-      >
-        <Option
-          v-for="item in group.children"
-          :value="item.value"
-          :key="item.value"
-          >{{ item.label }}</Option
-        >
+      <OptionGroup v-for="(group, index) in opts" :key="index" :label="group.label">
+        <Option v-for="item in group.children" :value="item.value" :key="item.value">{{ item.label }}</Option>
       </OptionGroup>
     </Select>
   </div>
 </template>
 <script>
-const DEFAULT_TAG_NUMBER = 2;
-import { queryReferenceEnumCodes } from "@/api/server";
+const DEFAULT_TAG_NUMBER = 2
 export default {
-  name: "WeSelect",
+  name: 'WeSelect',
 
   props: {
     value: {},
@@ -52,59 +31,27 @@ export default {
     maxTags: { default: () => DEFAULT_TAG_NUMBER },
     filterParams: {}
   },
-  data() {
+  data () {
     return {
       filterOpts: []
-    };
+    }
   },
   watch: {},
   computed: {
-    opts() {
+    opts () {
       if (this.filterParams) {
-        return this.filterOpts;
+        return this.filterOpts
       } else {
-        return this.options;
+        return this.options
       }
     }
   },
-  mounted() {},
+  mounted () {},
   methods: {
-    formatOptions() {},
-    changeValue(val) {
-      this.$emit("input", val ? val : null);
-      this.$emit("change", val ? val : null);
-    },
-    async getFilterRulesOptions(val) {
-      if (val && this.filterParams) {
-        const rows = JSON.parse(JSON.stringify(this.filterParams.params));
-        delete rows.isRowEditable;
-        delete rows.weTableForm;
-        delete rows.weTableRowId;
-        delete rows.isNewAddedRow;
-        delete rows.nextOperations;
-        const payload = {
-          attrId: this.filterParams.attrId,
-          params: {
-            dialect: {
-              data: rows
-            }
-          }
-        };
-        const { data, status, message } = await queryReferenceEnumCodes(
-          payload
-        );
-        if (status === "OK") {
-          this.filterOpts = data.contents
-            .filter(j => j.status === "active")
-            .map(i => {
-              return {
-                label: i.value,
-                value: i.codeId
-              };
-            });
-        }
-      }
+    changeValue (val) {
+      this.$emit('input', val || null)
+      this.$emit('change', val || null)
     }
   }
-};
+}
 </script>
