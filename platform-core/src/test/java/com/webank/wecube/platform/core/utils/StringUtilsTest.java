@@ -46,14 +46,14 @@ public class StringUtilsTest {
 
     @Test
     public void isValidIpTestCase6() {
-        String ip = "10.107.117.154";
+        String ip = "127.10.10.10";
         log.info("Checking IP: " + ip);
         assertThat(StringUtils.isValidIp(ip)).isTrue();
     }
 
     @Test
     public void isValidIpTestCase7() {
-        String ip = "172.21.0.72";
+        String ip = "196.0.0.72";
         log.info("Checking IP: " + ip);
         assertThat(StringUtils.isValidIp(ip)).isTrue();
     }
