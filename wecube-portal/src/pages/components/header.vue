@@ -1,5 +1,6 @@
 <template>
   <Header>
+    <span class="logo">WeCube(Demo)</span>
     <div class="menus">
       <Menu mode="horizontal" theme="dark">
         <div v-for="menu in menus" :key="menu.code">
@@ -224,6 +225,13 @@ export default {
     color: white;
   }
 
+  .logo {
+    font-size: 16px;
+    color: #fff;
+    font-weight: 600;
+    float: left;
+    margin-right: 10px;
+  }
   .menus {
     display: inline-block;
     .ivu-menu-horizontal {

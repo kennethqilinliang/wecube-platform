@@ -21,6 +21,7 @@
         Login
       </Button>
       <!-- <Button type="success" long>SUBMIT</Button> -->
+      <p style="margin-top: 20px; color: white">演示环境默认体验用户：admin; 密码：admin</p>
     </div>
   </div>
 </template>

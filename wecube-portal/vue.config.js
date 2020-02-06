@@ -1,26 +1,14 @@
 const CompressionPlugin = require('compression-webpack-plugin')
 
-const baseURL = 'http://127.0.0.1:8080'
+const baseURL = 'http://111.230.161.237:19090/'
 
 module.exports = {
   devServer: {
     open: true,
     port: 3000,
     proxy: {
-      '/platform': {
+      '/': {
         target: baseURL
-      },
-      '/wecmdb': {
-        target: baseURL
-      },
-      'ui-resources': {
-        target: baseURL
-      },
-      'wecube-monitor': {
-        target: 'https://sandbox.webank.com'
-      },
-      '/auth': {
-        target: 'http://127.0.0.1:19110'
       }
     }
   },
