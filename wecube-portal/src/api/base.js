@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import axios from 'axios'
+import exportFile from '@/const/export-file'
 const baseURL = ''
 const req = axios.create({
   withCredentials: true,
@@ -13,13 +14,6 @@ const throwError = res => {
     desc: (res.data && 'status:' + res.data.status + '<br/> message:' + res.data.message) || 'error'
   })
 }
-const throwInfo = res => {
-  Vue.prototype.$Notice.info({
-    title: 'Info',
-    desc: (res.data && 'status:' + res.data.status + '<br/> message:' + res.data.message) || 'error'
-  })
-}
-
 let refreshRequest = null
 
 req.interceptors.request.use(
@@ -47,7 +41,7 @@ req.interceptors.request.use(
             // eslint-disable-next-line handle-callback-err
             err => {
               refreshRequest = null
-              window.location.href = window.location.origin + '/#/login'
+              window.location.href = window.location.origin + window.location.pathname + '#/login'
               session.removeItem('token')
             }
           )
@@ -63,7 +57,7 @@ req.interceptors.request.use(
             // eslint-disable-next-line handle-callback-err
             err => {
               refreshRequest = null
-              window.location.href = window.location.origin + '/#/login'
+              window.location.href = window.location.origin + window.location.pathname + '#/login'
               session.removeItem('token')
             }
           )
@@ -94,32 +88,16 @@ req.interceptors.response.use(
           duration: 0
         })
       }
-
-      if (res.headers['content-type'] === 'application/octet-stream') {
-        let contentDispositionHeader = res.headers['content-disposition']
-        let filename = 'file'
-        if (contentDispositionHeader) {
-          filename = contentDispositionHeader
-            .split(';')
-            .find(x => ~x.indexOf('filename'))
-            .split('=')[1]
-        }
-        if (filename === null || filename === undefined || filename === '') {
-          filename = 'file'
-        }
-        let url = window.URL.createObjectURL(new Blob([res.data]))
-        let link = document.createElement('a')
-        link.style.display = 'none'
-        link.href = url
-        link.setAttribute('download', filename)
-        document.body.appendChild(link)
-        link.click()
+      if (
+        res.headers['content-type'] === 'application/octet-stream' &&
+        res.request.responseURL.includes('/platform/')
+      ) {
+        exportFile(res)
         Vue.prototype.$Notice.info({
           title: 'Success',
           desc: '',
           duration: 0
         })
-
         return
       }
       return res.data instanceof Array ? res.data : { ...res.data }
@@ -132,8 +110,8 @@ req.interceptors.response.use(
   err => {
     const { response } = err
     if (response.status === 401) {
-      window.location.href = window.location.origin + '/#/login'
-      throwInfo(response)
+      window.location.href = window.location.origin + window.location.pathname + '#/login'
+      // throwInfo(response)
       return response
     }
 
