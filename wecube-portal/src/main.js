@@ -88,27 +88,25 @@ window.use = (lib, options) => {
   Vue.use(lib, options)
 }
 
-// comment out for demo
-
-// const findPath = (routes, path) => {
-//   let found
-//   window.routers.concat(routes).forEach(route => {
-//     if (route.children) {
-//       route.children.forEach(child => {
-//         if (child.path === path || child.redirect === path) {
-//           found = true
-//         }
-//       })
-//     }
-//     if (route.path === path || route.redirect === path) {
-//       found = true
-//     }
-//     if (path.includes(route.path) && route.path !== '/') {
-//       found = true
-//     }
-//   })
-//   return found
-// }
+const findPath = (routes, path) => {
+  let found
+  window.routers.concat(routes).forEach(route => {
+    if (route.children) {
+      route.children.forEach(child => {
+        if (child.path === path || child.redirect === path) {
+          found = true
+        }
+      })
+    }
+    if (route.path === path || route.redirect === path) {
+      found = true
+    }
+    if (path.includes(route.path) && route.path !== '/') {
+      found = true
+    }
+  })
+  return found
+}
 
 let childRouters = []
 
@@ -129,36 +127,35 @@ const getChildRouters = routes => {
   }
 }
 
-// comment out for demo
-
-// router.beforeEach((to, from, next) => {
-//   const found = findPath(router.options.routes, to.path)
-//   if (!found) {
-//     window.location.href = window.location.origin + '#/homepage'
-//     next('/homepage')
-//   } else {
-//     if (window.myMenus) {
-//       let isHasPermission = []
-//         .concat(...window.myMenus.map(_ => _.submenus), childRouters)
-//         .find(_ => _.link === to.path)
-//       if (
-//         (isHasPermission && isHasPermission.active) ||
-//         to.path === '/404' ||
-//         to.path === '/login' ||
-//         to.path === '/homepage'
-//       ) {
-//         /* has permission */
-//         window.sessionStorage.setItem('currentPath', to.path === '/404' || to.path === '/login' ? '/homepage' : to.path)
-//         next()
-//       } else {
-//         /* has no permission */
-//         next('/404')
-//       }
-//     } else {
-//       next()
-//     }
-//   }
-// })
+router.beforeEach((to, from, next) => {
+  const found = findPath(router.options.routes, to.path)
+  if (!found) {
+    window.location.href = window.location.origin + '#/homepage'
+    next('/homepage')
+  } else {
+    if (window.myMenus) {
+      let isHasPermission = []
+        .concat(...window.myMenus.map(_ => _.submenus), childRouters)
+        .find(_ => _.link === to.path)
+      if (
+        (isHasPermission && isHasPermission.active) ||
+        to.path === '/404' ||
+        to.path === '/login' ||
+        to.path === '/homepage' ||
+        !isHasPermission
+      ) {
+        /* has permission */
+        window.sessionStorage.setItem('currentPath', to.path === '/404' || to.path === '/login' ? '/homepage' : to.path)
+        next()
+      } else {
+        /* has no permission */
+        next('/404')
+      }
+    } else {
+      next()
+    }
+  }
+})
 const vm = new Vue({
   router,
   render: h => h(App)
