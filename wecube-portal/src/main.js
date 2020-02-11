@@ -88,6 +88,8 @@ window.use = (lib, options) => {
   Vue.use(lib, options)
 }
 
+// comment out for demo
+
 // const findPath = (routes, path) => {
 //   let found
 //   window.routers.concat(routes).forEach(route => {
