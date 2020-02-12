@@ -5,7 +5,6 @@ import com.webank.wecube.platform.core.domain.plugin.PluginPackageMenu;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 public interface PluginPackageMenuRepository extends CrudRepository<PluginPackageMenu, String> {
