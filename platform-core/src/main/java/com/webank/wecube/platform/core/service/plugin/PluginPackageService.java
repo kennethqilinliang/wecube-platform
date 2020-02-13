@@ -18,8 +18,12 @@ import com.webank.wecube.platform.core.service.CommandService;
 import com.webank.wecube.platform.core.service.PluginInstanceService;
 import com.webank.wecube.platform.core.service.PluginPackageDataModelService;
 import com.webank.wecube.platform.core.service.ScpService;
+import com.webank.wecube.platform.core.service.user.RoleMenuService;
 import com.webank.wecube.platform.core.service.user.UserManagementService;
 import com.webank.wecube.platform.core.support.S3Client;
+import com.webank.wecube.platform.core.support.authserver.AsAuthorityDto;
+import com.webank.wecube.platform.core.support.authserver.AsRoleAuthoritiesDto;
+import com.webank.wecube.platform.core.support.authserver.AuthServerRestClient;
 import com.webank.wecube.platform.core.utils.SystemUtils;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -91,6 +95,12 @@ public class PluginPackageService {
 
     @Autowired
     private SystemVariableRepository systemVariableRepository;
+
+    @Autowired
+    private RoleMenuService roleMenuService;
+
+    @Autowired
+    private AuthServerRestClient authServerRestClient;
 
     @Transactional
     public PluginPackage uploadPackage(MultipartFile pluginPackageFile) throws Exception {
@@ -237,6 +247,8 @@ public class PluginPackageService {
 
         createRolesIfNotExistInSystem(pluginPackage);
 
+        bindRoleToMenuWithAuthority(pluginPackage);
+
         updateSystemVariableStatus(pluginPackage);
 
         deployPluginUiResourcesIfRequired(pluginPackage);
@@ -246,20 +258,28 @@ public class PluginPackageService {
         return pluginPackageRepository.save(pluginPackage);
     }
 
+
     private void updateSystemVariableStatus(PluginPackage pluginPackage) {
-        List<SystemVariable> systemVariables = systemVariableRepository.findAllByScope(pluginPackage.getName());
-        systemVariables.forEach(systemVariable -> {
-            if (SystemVariable.ACTIVE.equals(systemVariable.getStatus())
-                    && !pluginPackage.getId().equals(systemVariable.getSource())) {
-                systemVariable.deactivate();
+        List<SystemVariable> globalSystemVariables = systemVariableRepository.findAllByScopeAndSource("global",
+                pluginPackage.getId());
+        globalSystemVariables.forEach(globalSystemVariable -> {
+            globalSystemVariable.activate();
+        });
+        systemVariableRepository.saveAll(globalSystemVariables);
+
+        List<SystemVariable> pluginSystemVariables = systemVariableRepository.findAllByScope(pluginPackage.getName());
+        pluginSystemVariables.forEach(pluginSystemVariable -> {
+            if (SystemVariable.ACTIVE.equals(pluginSystemVariable.getStatus())
+                    && !pluginPackage.getId().equals(pluginSystemVariable.getSource())) {
+                pluginSystemVariable.deactivate();
             }
-            if (SystemVariable.INACTIVE.equals(systemVariable.getStatus())
-                    && pluginPackage.getId().equals(systemVariable.getSource())) {
-                systemVariable.activate();
+            if (SystemVariable.INACTIVE.equals(pluginSystemVariable.getStatus())
+                    && pluginPackage.getId().equals(pluginSystemVariable.getSource())) {
+                pluginSystemVariable.activate();
             }
         });
 
-        systemVariableRepository.saveAll(systemVariables);
+        systemVariableRepository.saveAll(pluginSystemVariables);
     }
 
     void createRolesIfNotExistInSystem(PluginPackage pluginPackage) {
@@ -282,6 +302,33 @@ public class PluginPackageService {
                     userManagementService.registerLocalRole(rd);
                 });
             }
+        }
+    }
+
+    void bindRoleToMenuWithAuthority(PluginPackage pluginPackage) throws WecubeCoreException {
+        final Set<PluginPackageAuthority> pluginPackageAuthorities = pluginPackage.getPluginPackageAuthorities();
+        final List<String> selfPkgMenuCodeList = pluginPackage.getPluginPackageMenus().stream().map(PluginPackageMenu::getCode).collect(Collectors.toList());
+        if (null != pluginPackageAuthorities && pluginPackageAuthorities.size() > 0) {
+            pluginPackageAuthorities.forEach(pluginPackageAuthority -> {
+                final String roleName = pluginPackageAuthority.getRoleName();
+                final String menuCode = pluginPackageAuthority.getMenuCode();
+
+                // create role menu binding
+                if (!selfPkgMenuCodeList.contains(menuCode)) {
+                    String msg = String.format("The declared menu code: [%s] in <authorities> field doesn't declared in <menus> field of register.xml", menuCode);
+                    log.error(msg);
+                    throw new WecubeCoreException(msg);
+                }
+                this.roleMenuService.createRoleMenuBinding(roleName, menuCode);
+
+                // grant authority to role and send request to auth server
+                AsAuthorityDto grantAuthority = new AsAuthorityDto();
+                grantAuthority.setCode(menuCode);
+                AsRoleAuthoritiesDto grantAuthorityToRole = new AsRoleAuthoritiesDto();
+                grantAuthorityToRole.setRoleName(roleName);
+                grantAuthorityToRole.setAuthorities(Collections.singletonList(grantAuthority));
+                this.authServerRestClient.configureRoleAuthoritiesWithRoleName(grantAuthorityToRole);
+            });
         }
     }
 
@@ -398,7 +445,7 @@ public class PluginPackageService {
                 }
 
                 try (BufferedInputStream inputStream = new BufferedInputStream(zipFile.getInputStream(entry));
-                        OutputStream outputStream = new FileOutputStream(destFilePath + zipEntryName, true)) {
+                     OutputStream outputStream = new FileOutputStream(destFilePath + zipEntryName, true)) {
                     byte[] buf = new byte[2048];
                     int len;
                     while ((len = inputStream.read(buf)) > 0) {
@@ -414,7 +461,7 @@ public class PluginPackageService {
     }
 
     private Optional<Set<PluginPackageResourceFile>> getAllPluginPackageResourceFile(PluginPackage pluginPackage,
-            String sourceZipFile, String sourceZipFileName) throws Exception {
+                                                                                     String sourceZipFile, String sourceZipFileName) throws Exception {
         Optional<Set<PluginPackageResourceFile>> pluginPackageResourceFilesOptional = Optional.empty();
         try (ZipFile zipFile = new ZipFile(sourceZipFile)) {
             Enumeration entries = zipFile.entries();
@@ -422,7 +469,7 @@ public class PluginPackageService {
             if (entries.hasMoreElements()) {
                 pluginPackageResourceFiles = newLinkedHashSet();
             }
-            for (; entries.hasMoreElements();) {
+            for (; entries.hasMoreElements(); ) {
                 ZipEntry entry = (ZipEntry) entries.nextElement();
                 if (!entry.isDirectory()) {
                     String zipEntryName = entry.getName();
@@ -564,7 +611,7 @@ public class PluginPackageService {
     }
 
     private void updateDependencyDto(PluginPackageDependency pluginPackageDependency,
-            PluginPackageDependencyDto pluginPackageDependencyDto) {
+                                     PluginPackageDependencyDto pluginPackageDependencyDto) {
         // create new dependencyDto according to input dependency
         String dependencyName = pluginPackageDependency.getDependencyPackageName();
         String dependencyVersion = pluginPackageDependency.getDependencyPackageVersion();

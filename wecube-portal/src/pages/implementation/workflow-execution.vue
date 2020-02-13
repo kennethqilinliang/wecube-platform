@@ -279,6 +279,13 @@ export default {
       catchNodeTableList: []
     }
   },
+  watch: {
+    targetModalVisible: function (val) {
+      if (!val) {
+        this.catchNodeTableList = []
+      }
+    }
+  },
   mounted () {
     this.getProcessInstances()
     this.getAllFlow()
@@ -383,10 +390,10 @@ export default {
       this.timer = null
       if (!this.selectedFlowInstance) return
       this.isEnqueryPage = true
-
       this.$nextTick(async () => {
         const found = this.allFlowInstances.find(_ => _.id === this.selectedFlowInstance)
         if (!(found && found.id)) return
+        this.processInstance()
         this.getNodeBindings(found.id)
         let { status, data } = await getProcessInstance(found.id)
         if (status === 'OK') {
@@ -410,12 +417,12 @@ export default {
       })
     },
     queryHistory () {
+      this.selectedTarget = null
       clearInterval(this.timer)
       this.timer = null
       this.isEnqueryPage = true
       this.showExcution = false
       this.selectedFlow = ''
-      this.selectedTarget = ''
       this.modelData = []
       this.flowData = {}
       this.$nextTick(() => {
@@ -424,11 +431,11 @@ export default {
       })
     },
     createHandler () {
+      this.selectedTarget = null
       clearInterval(this.timer)
       this.timer = null
       this.isEnqueryPage = false
       this.selectedFlowInstance = ''
-      this.selectedTarget = ''
       this.selectedFlow = ''
       this.modelData = []
       this.flowData = {}
@@ -455,6 +462,7 @@ export default {
       this.isLoading = true
       let { status, data } = await getTreePreviewData(this.selectedFlow, this.selectedTarget)
       this.isLoading = false
+      if (!this.selectedTarget) return
       if (status === 'OK') {
         this.modelData = data.map(_ => {
           return {
@@ -798,6 +806,7 @@ export default {
           Object.keys(objData).forEach(i => {
             if (_.id === objData[i].id && flowNodeIndex > -1) {
               objData[i]._isChecked = true
+              this.catchNodeTableList.push(objData[i])
             }
           })
         })

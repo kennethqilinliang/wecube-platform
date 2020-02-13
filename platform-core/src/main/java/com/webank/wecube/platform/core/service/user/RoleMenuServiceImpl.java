@@ -1,16 +1,5 @@
 package com.webank.wecube.platform.core.service.user;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.webank.wecube.platform.core.commons.WecubeCoreException;
 import com.webank.wecube.platform.core.domain.MenuItem;
 import com.webank.wecube.platform.core.domain.RoleMenu;
@@ -23,6 +12,17 @@ import com.webank.wecube.platform.core.jpa.PluginPackageMenuRepository;
 import com.webank.wecube.platform.core.jpa.user.RoleMenuRepository;
 import com.webank.wecube.platform.core.support.authserver.AsAuthorityDto;
 import com.webank.wecube.platform.core.support.authserver.AuthServerRestClient;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * @author howechen
@@ -54,16 +54,22 @@ public class RoleMenuServiceImpl implements RoleMenuService {
      */
     @Override
     public RoleMenuDto retrieveMenusByRoleId(String roleId) throws WecubeCoreException {
-        logger.info(String.format("Fetching all menus by role ID: [%s]", roleId));
-        List<RoleMenu> roleMenuList;
+
+        String roleName = roleIdValidation(roleId);
+
+        logger.info(String.format("Fetching all menus by role name: [%s]", roleName));
+        List<RoleMenu> roleMenuList = new ArrayList<>();
         try {
-            roleMenuList = this.roleMenuRepository.findAllByRoleId(roleId);
+            final Optional<List<RoleMenu>> foundByRoleName = this.roleMenuRepository.findAllByRoleName(roleName);
+            if (foundByRoleName.isPresent()) {
+                roleMenuList = foundByRoleName.get();
+            }
         } catch (Exception ex) {
             logger.error(ex.getMessage());
             throw new WecubeCoreException(ex.getMessage());
         }
 
-        List<MenuItemDto> menuCodeList = new ArrayList<>();
+        List<MenuItemDto> menuList = new ArrayList<>();
         roleMenuList.forEach(roleMenu -> {
             String menuCode = roleMenu.getMenuCode();
             // sys menu
@@ -71,18 +77,18 @@ public class RoleMenuServiceImpl implements RoleMenuService {
             // use {if sysMenu is null} to judge if this is a sys menu or package menu
             if (null != sysMenu) {
                 logger.info(String.format("System menu was found. The menu code is: [%s]", menuCode));
-                menuCodeList.add(MenuItemDto.fromSystemMenuItem(sysMenu));
+                menuList.add(MenuItemDto.fromSystemMenuItem(sysMenu));
             } else {
                 // package menu
                 Optional<List<PluginPackageMenu>> allActivatePackageMenuByCode = this.pluginPackageMenuRepository.findAllActiveMenuByCode(menuCode);
                 allActivatePackageMenuByCode.ifPresent(pluginPackageMenus -> {
                     logger.info(String.format("Plugin package menu was found. The menu code is: [%s]", menuCode));
-                    pluginPackageMenus.forEach(pluginPackageMenu -> menuCodeList.add(this.transferPackageMenuToMenuItemDto(pluginPackageMenu)));
+                    pluginPackageMenus.forEach(pluginPackageMenu -> menuList.add(this.transferPackageMenuToMenuItemDto(pluginPackageMenu)));
                 });
             }
 
         });
-        return new RoleMenuDto(roleId, menuCodeList);
+        return new RoleMenuDto(roleId, menuList);
     }
 
     /**
@@ -93,9 +99,14 @@ public class RoleMenuServiceImpl implements RoleMenuService {
      */
     @Override
     public void updateRoleToMenusByRoleId(String roleId, List<String> menuCodeList) throws WecubeCoreException {
-        List<RoleMenu> roleMenuList = this.roleMenuRepository.findAllByRoleId(roleId);
-        RoleDto roleDto = userManagementService.retrieveRoleById(roleId);
-        String roleName = roleDto.getName();
+
+        String roleName = roleIdValidation(roleId);
+
+        List<RoleMenu> roleMenuList = new ArrayList<>();
+        final Optional<List<RoleMenu>> roleMenuListOpt = this.roleMenuRepository.findAllByRoleName(roleName);
+        if (roleMenuListOpt.isPresent()) {
+            roleMenuList = roleMenuListOpt.get();
+        }
 
         // current menuCodeList - new menuCodeList = needToDeleteList
         List<RoleMenu> needToDeleteList = roleMenuList.stream().filter(roleMenu -> {
@@ -106,17 +117,17 @@ public class RoleMenuServiceImpl implements RoleMenuService {
             logger.info(String.format("Deleting menus: [%s]", needToDeleteList));
             for (RoleMenu roleMenu : needToDeleteList) {
                 this.roleMenuRepository.deleteById(roleMenu.getId());
-                
+
             }
         }
-        
+
         List<AsAuthorityDto> authoritiesToRevoke = new ArrayList<>();
-        for(RoleMenu rm : needToDeleteList){
-        	AsAuthorityDto authorityToRevoke = new AsAuthorityDto();
-        	authorityToRevoke.setCode(rm.getMenuCode());
-        	authoritiesToRevoke.add(authorityToRevoke);
+        for (RoleMenu rm : needToDeleteList) {
+            AsAuthorityDto authorityToRevoke = new AsAuthorityDto();
+            authorityToRevoke.setCode(rm.getMenuCode());
+            authoritiesToRevoke.add(authorityToRevoke);
         }
-        
+
         authServerRestClient.revokeAuthoritiesFromRole(roleId, authoritiesToRevoke);
 
         // new menuCodeList - current menuCodeList = needToCreateList
@@ -127,22 +138,42 @@ public class RoleMenuServiceImpl implements RoleMenuService {
         if (!needToCreateList.isEmpty()) {
             logger.info(String.format("Creating menus: [%s]", needToCreateList));
             List<RoleMenu> batchUpdateList = new ArrayList<>();
-            needToCreateList.forEach(menuCode -> batchUpdateList.add(new RoleMenu(roleId, roleName, menuCode)));
+            needToCreateList.forEach(menuCode -> batchUpdateList.add(new RoleMenu(roleName, menuCode)));
             try {
                 this.roleMenuRepository.saveAll(batchUpdateList);
             } catch (Exception ex) {
                 logger.error(ex.getMessage());
                 throw new WecubeCoreException(ex.getMessage());
             }
-            
+
             List<AsAuthorityDto> authoritiesToGrant = new ArrayList<>();
-            for(RoleMenu rm : batchUpdateList){
-            	AsAuthorityDto authorityToGrant = new AsAuthorityDto();
-            	authorityToGrant.setCode(rm.getMenuCode());
-            	authoritiesToGrant.add(authorityToGrant);
+            for (RoleMenu rm : batchUpdateList) {
+                AsAuthorityDto authorityToGrant = new AsAuthorityDto();
+                authorityToGrant.setCode(rm.getMenuCode());
+                authoritiesToGrant.add(authorityToGrant);
             }
-            
+
             authServerRestClient.configureRoleAuthorities(roleId, authoritiesToGrant);
+        }
+    }
+
+    private String roleIdValidation(String roleId) throws WecubeCoreException {
+        String roleName = this.userManagementService.retrieveRoleById(roleId).getName();
+
+        if (StringUtils.isEmpty(roleName)) {
+            String msg = String.format("Cannot validate role id: [%s] from auth server.", roleId);
+            logger.error(msg);
+            throw new WecubeCoreException(msg);
+        }
+        return roleName;
+    }
+
+    @Override
+    public void createRoleMenuBinding(String roleName, String menuCode) {
+        final Boolean isRoleMenuBindingExists = this.roleMenuRepository.existsRoleMenuByRoleNameAndMenuCode(roleName, menuCode);
+        if (!isRoleMenuBindingExists) {
+            logger.info("Saving roleMenuBinding, role name: [{}], menu code: [{}]", roleName, menuCode);
+            this.roleMenuRepository.save(new RoleMenu(roleName, menuCode));
         }
     }
 
@@ -173,4 +204,6 @@ public class RoleMenuServiceImpl implements RoleMenuService {
         }
         return MenuItemDto.fromPackageMenuItem(packageMenu, menuItem);
     }
+
+
 }
