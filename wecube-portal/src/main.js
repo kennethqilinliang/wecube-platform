@@ -136,7 +136,8 @@ router.beforeEach((to, from, next) => {
         (isHasPermission && isHasPermission.active) ||
         to.path === '/404' ||
         to.path === '/login' ||
-        to.path === '/homepage'
+        to.path === '/homepage' ||
+        !isHasPermission
       ) {
         /* has permission */
         window.sessionStorage.setItem('currentPath', to.path === '/404' || to.path === '/login' ? '/homepage' : to.path)
