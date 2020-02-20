@@ -30,8 +30,8 @@ import { login } from '../api/server'
 export default {
   data () {
     return {
-      username: '',
-      password: '',
+      username: 'admin',
+      password: 'admin',
       loading: false
     }
   },
