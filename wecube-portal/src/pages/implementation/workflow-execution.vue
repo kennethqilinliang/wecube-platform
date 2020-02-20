@@ -93,7 +93,9 @@
         </Row>
       </Row>
       <div style="text-align: right;margin-top: 6px;margin-right:40px">
-        <Button v-if="showExcution" style="width:120px" type="info" @click="excutionFlow">{{ $t('execute') }}</Button>
+        <Button v-if="showExcution" :disabled="isExecuteActive" style="width:120px" type="info" @click="excutionFlow">{{
+          $t('execute')
+        }}</Button>
       </div>
     </Card>
     <Modal
@@ -127,10 +129,17 @@
         :data="tartetModels"
       >
         <template slot-scope="{ row, index }" slot="action">
-          <Tooltip placement="bottom" theme="light" @on-popper-show="getDetail(row)" :delay="500" max-width="400">
+          <Tooltip
+            placement="bottom"
+            theme="light"
+            trigger="click"
+            @on-popper-show="getDetail(row)"
+            :delay="500"
+            max-width="500"
+          >
             <Button type="warning" size="small">View</Button>
             <div slot="content">
-              <pre><span>{{rowContent}}</span></pre>
+              <pre style="max-height: 500px;"><span>{{rowContent}}</span></pre>
             </div>
           </Tooltip>
         </template>
@@ -142,13 +151,17 @@
         <Icon v-if="!nodeDetailFullscreen" @click="zoomModal" class="header-icon" type="ios-expand" />
         <Icon v-else @click="nodeDetailFullscreen = false" class="header-icon" type="ios-contract" />
       </p>
-      <div style="overflow:auto;">
+      <div v-if="!isTargetNodeDetail" :style="[{ overflow: 'auto' }, fullscreenModalContentStyle]">
         <h5>Data:</h5>
         <div style="margin: 0 6px 6px" v-html="nodeDetailResponseHeader"></div>
-        <!-- <pre>{{ nodeDetail }}</pre> -->
         <h5>requestObjects:</h5>
         <Table :columns="nodeDetailColumns" :max-height="tableMaxHeight" tooltip="true" :data="nodeDetailIO"></Table>
       </div>
+      <div
+        v-else
+        :style="[{ overflow: 'auto', margin: '0 6px 6px' }, fullscreenModalContentStyle]"
+        v-html="nodeDetail"
+      ></div>
     </Modal>
     <div id="model_graph_detail">
       <highlight-code lang="json">{{ modelNodeDetail }}</highlight-code>
@@ -180,7 +193,9 @@ export default {
   data () {
     return {
       showNodeDetail: false,
+      isTargetNodeDetail: false,
       nodeDetailFullscreen: false,
+      fullscreenModalContentStyle: { 'max-height': '400px' },
       tableMaxHeight: 250,
       nodeTitle: null,
       nodeDetail: null,
@@ -199,6 +214,7 @@ export default {
       selectedFlow: '',
       selectedTarget: '',
       showExcution: true,
+      isExecuteActive: false,
       isEnqueryPage: false,
       workflowActionModalVisible: false,
       targetModalVisible: false,
@@ -279,6 +295,16 @@ export default {
       catchNodeTableList: []
     }
   },
+  watch: {
+    targetModalVisible: function (val) {
+      if (!val) {
+        this.catchNodeTableList = []
+      }
+    },
+    nodeDetailFullscreen: function (tag) {
+      tag ? (this.fullscreenModalContentStyle = {}) : (this.fullscreenModalContentStyle['max-height'] = '400px')
+    }
+  },
   mounted () {
     this.getProcessInstances()
     this.getAllFlow()
@@ -286,7 +312,6 @@ export default {
   },
   destroyed () {
     clearInterval(this.timer)
-    this.timer = null
   },
   methods: {
     async getDetail (row) {
@@ -362,25 +387,25 @@ export default {
         this.renderModelGraph()
       }
     },
-    async getTargetOptions () {
-      if (!(this.flowData.rootEntity || !this.flowData.entityTypeId)) return
-      let pkgName = ''
-      let entityName = ''
+    getTargetOptions () {
       if (this.flowData.rootEntity) {
-        pkgName = this.flowData.rootEntity.split(':')[0]
-        entityName = this.flowData.rootEntity.split(':')[1]
-      } else {
-        pkgName = this.flowData.entityTypeId.split(':')[0]
-        entityName = this.flowData.entityTypeId.split(':')[1]
+        this.getTargetData('rootEntity')
+        return
       }
-      let { status, data } = await getTargetOptions(pkgName, entityName)
+      if (this.flowData.entityTypeId) {
+        this.getTargetData('entityTypeId')
+      }
+    },
+    async getTargetData (flowDataKey) {
+      const pkgName = this.flowData[flowDataKey].split(':')[0]
+      const entityName = this.flowData[flowDataKey].split(':')[1]
+      const { status, data } = await getTargetOptions(pkgName, entityName)
       if (status === 'OK') {
         this.allTarget = data
       }
     },
     queryHandler () {
-      clearInterval(this.timer)
-      this.timer = null
+      this.stop()
       if (!this.selectedFlowInstance) return
       this.isEnqueryPage = true
       this.$nextTick(async () => {
@@ -411,8 +436,7 @@ export default {
     },
     queryHistory () {
       this.selectedTarget = null
-      clearInterval(this.timer)
-      this.timer = null
+      this.stop()
       this.isEnqueryPage = true
       this.showExcution = false
       this.selectedFlow = ''
@@ -425,8 +449,7 @@ export default {
     },
     createHandler () {
       this.selectedTarget = null
-      clearInterval(this.timer)
-      this.timer = null
+      this.stop()
       this.isEnqueryPage = false
       this.selectedFlowInstance = ''
       this.selectedFlow = ''
@@ -531,8 +554,11 @@ export default {
         this.nodeTitle = `${found.displayName}`
         const { status, data } = await getModelNodeDetail(found.entityName, found.dataId)
         if (status === 'OK') {
-          this.nodeDetail = data
+          this.nodeDetail = JSON.stringify(data)
+            .split(',')
+            .join(',<br/>')
         }
+        this.isTargetNodeDetail = true
         this.nodeDetailFullscreen = false
         this.showNodeDetail = true
         this.nodeDetailFullscreen = false
@@ -615,6 +641,7 @@ export default {
         this.processInstance()
         this.showExcution = false
       } else {
+        this.isExecuteActive = true
         const currentTarget = this.allTarget.find(_ => _.id === this.selectedTarget)
         let taskNodeBinds = []
         this.modelData.forEach(_ => {
@@ -645,6 +672,7 @@ export default {
         let { status, data } = await createFlowInstance(payload)
         if (status === 'OK') {
           this.getProcessInstances(true, data)
+          this.isExecuteActive = false
           this.showExcution = false
           this.isEnqueryPage = true
         }
@@ -654,9 +682,8 @@ export default {
       if (this.timer === null) {
         this.getStatus()
       }
-      if (this.timer != null) {
-        clearInterval(this.timer)
-        this.timer = null
+      if (this.timer !== null) {
+        this.stop()
       }
       this.timer = setInterval(() => {
         this.getStatus()
@@ -664,7 +691,6 @@ export default {
     },
     stop () {
       clearInterval(this.timer)
-      this.timer = null
     },
     async getStatus () {
       const found = this.allFlowInstances.find(_ => _.id === this.selectedFlowInstance)
@@ -685,7 +711,6 @@ export default {
       }
     },
     processInstance () {
-      this.timer = null
       this.start()
     },
     retryHandler (e) {
@@ -750,6 +775,7 @@ export default {
           this.nodeDetailIO = data.requestObjects
         }
         this.nodeDetailFullscreen = false
+        this.isTargetNodeDetail = false
         this.showNodeDetail = true
         this.nodeDetailFullscreen = false
         this.tableMaxHeight = 250
@@ -799,6 +825,7 @@ export default {
           Object.keys(objData).forEach(i => {
             if (_.id === objData[i].id && flowNodeIndex > -1) {
               objData[i]._isChecked = true
+              this.catchNodeTableList.push(objData[i])
             }
           })
         })

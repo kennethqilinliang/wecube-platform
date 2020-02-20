@@ -88,7 +88,7 @@
             </Col>
           </Row>
           <div id="paramsContainer">
-            <Collapse simple>
+            <Collapse v-model="activePanel" simple>
               <Panel
                 v-for="(inter, index) in currentPluginObj.interfaces"
                 :key="index + inter.action"
@@ -190,18 +190,6 @@
                         </Col>
                         <Col span="10" offset="0">
                           <FormItem :label-width="0">
-                            <!-- <Select
-                          v-if="outPut.mappingType === 'entity'"
-                          v-model="outPut.mappingEntityExpression"
-                          :disabled="currentPluginObj.status === 'ENABLED'"
-                        >
-                          <Option
-                            v-for="attr in currentEntityAttr"
-                            :key="attr.name"
-                            :value="attr.name"
-                            :label="attr.name"
-                          ></Option>
-                            </Select>-->
                             <PathExp
                               v-if="outPut.mappingType === 'entity'"
                               :rootPkg="pkgName"
@@ -278,6 +266,7 @@ import {
 export default {
   data () {
     return {
+      activePanel: null,
       allDataModelsWithAttrs: {},
       currentPlugin: '',
       plugins: [],
@@ -370,10 +359,11 @@ export default {
       }
     },
     async regist () {
-      const pluginConfigDtoList = this.plugins.find(plugin => plugin.pluginConfigName === this.currentPlugin)
-        .pluginConfigDtoList
-      const plugin = pluginConfigDtoList.find(dto => dto.id === this.currentPluginObj.id)
-      const saveRes = await savePluginConfig(plugin)
+      // const pluginConfigDtoList = this.plugins.find(plugin => plugin.pluginConfigName === this.currentPlugin)
+      //   .pluginConfigDtoList
+      // const plugin = pluginConfigDtoList.find(dto => dto.id === this.currentPluginObj.id)
+      // const saveRes = await savePluginConfig(plugin)
+      const saveRes = await savePluginConfig(this.currentPluginObj)
       if (saveRes.status === 'OK') {
         const { status, message } = await registerPlugin(this.currentPluginObj.id)
         if (status === 'OK') {
@@ -447,6 +437,7 @@ export default {
       this.sourceList = currentPluginData ? currentPluginData.pluginConfigDtoList : []
     },
     registSourceChange (v) {
+      this.activePanel = []
       if (!v || v === 'add') {
         this.registerName = ''
         this.selectedEntityType = ''
@@ -454,12 +445,15 @@ export default {
         return
       }
 
-      this.currentPluginObj = JSON.parse(JSON.stringify(this.sourceList.find(source => source.id === v)))
-      this.selectedEntityType = this.currentPluginObj.entityName
-      this.registerName = this.currentPluginObj.registerName
-      this.selectedEntityType = this.currentPluginObj.targetEntity
-      this.targetPackage = this.currentPluginObj.targetPackage
-      this.hasNewSource = false
+      this.currentPluginObj = {}
+      this.$nextTick(() => {
+        this.currentPluginObj = JSON.parse(JSON.stringify(this.sourceList.find(source => source.id === v)))
+        this.selectedEntityType = this.currentPluginObj.entityName
+        this.registerName = this.currentPluginObj.registerName
+        this.selectedEntityType = this.currentPluginObj.targetEntity
+        this.targetPackage = this.currentPluginObj.targetPackage
+        this.hasNewSource = false
+      })
     },
     copyRegistSource (v) {
       this.registSourceChange(v)
