@@ -27,6 +27,7 @@
 </template>
 <script>
 import { login } from '../api/server'
+import { setCookie } from './util/cookie'
 export default {
   data () {
     return {
@@ -46,7 +47,7 @@ export default {
       const { status, data } = await login(payload)
       if (status === 'OK') {
         let session = window.sessionStorage
-        session.setItem('token', JSON.stringify(data))
+        setCookie(data)
         session.setItem('username', this.username)
         this.$router.push('/homepage')
       }
@@ -54,7 +55,6 @@ export default {
     },
     clearSession () {
       let session = window.sessionStorage
-      session.removeItem('token')
       session.removeItem('username')
       window.needReLoad = true
     }

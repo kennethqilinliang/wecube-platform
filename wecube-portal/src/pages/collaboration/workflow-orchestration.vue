@@ -53,7 +53,7 @@
           </OptionGroup>
         </Select>
       </Col>
-      <Button type="info" @click="saveDiagram(false)">
+      <Button type="info" :disabled="isSaving" @click="saveDiagram(false)">
         {{ $t('save_flow') }}
       </Button>
       <Button type="info" @click="exportProcessDefinition(false)">
@@ -159,6 +159,7 @@
       v-model="flowRoleManageModal"
       width="700"
       :title="$t('edit_role')"
+      :mask-closable="false"
       @on-ok="confirmRole"
       @on-cancel="confirmRole"
     >
@@ -208,6 +209,7 @@ import 'bpmn-js-properties-panel/dist/assets/bpmn-js-properties-panel.css'
 
 import PathExp from '../components/path-exp.vue'
 import axios from 'axios'
+import { setCookie, getCookie } from '../util/cookie'
 
 import {
   getAllFlow,
@@ -239,6 +241,7 @@ export default {
   },
   data () {
     return {
+      isSaving: false,
       headers: {},
       mgmtRolesKeyToFlow: [],
       useRolesKeyToFlow: [],
@@ -621,8 +624,8 @@ export default {
           taskNodeInfos: _this.serviceTaskBindInfos
         }
 
-        isDraft
-          ? saveFlowDraft(payload).then(data => {
+        if (isDraft) {
+          saveFlowDraft(payload).then(data => {
             if (data && data.status === 'OK') {
               _this.$Notice.success({
                 title: 'Success',
@@ -633,7 +636,10 @@ export default {
               _this.temporaryFlow = data.data.procDefId
             }
           })
-          : saveFlow(payload).then(data => {
+        } else {
+          _this.isSaving = true
+          saveFlow(payload).then(data => {
+            _this.isSaving = false
             if (data && data.status === 'OK') {
               _this.$Notice.success({
                 title: 'Success',
@@ -644,6 +650,7 @@ export default {
               _this.temporaryFlow = data.data.procDefId
             }
           })
+        }
       })
     },
     savePluginConfig (ref) {
@@ -801,20 +808,18 @@ export default {
     getHeaders () {
       let refreshRequest = null
       const currentTime = new Date().getTime()
-      let session = window.sessionStorage
-      const token = JSON.parse(session.getItem('token'))
-      if (token) {
-        const accessToken = token.find(t => t.tokenType === 'accessToken')
-        const expiration = accessToken.expiration * 1 - currentTime
+      const accessToken = getCookie('accessToken')
+      if (accessToken) {
+        const expiration = getCookie('accessTokenExpirationTime') * 1 - currentTime
         if (expiration < 1 * 60 * 1000 && !refreshRequest) {
           refreshRequest = axios.get('/auth/v1/api/token', {
             headers: {
-              Authorization: 'Bearer ' + token.find(t => t.tokenType === 'refreshToken').token
+              Authorization: 'Bearer ' + getCookie('refreshToken')
             }
           })
           refreshRequest.then(
             res => {
-              session.setItem('token', JSON.stringify(res.data.data))
+              setCookie(res.data.data)
               this.setUploadActionHeader()
               this.$refs.uploadButton.handleClick()
             },
@@ -833,10 +838,8 @@ export default {
       }
     },
     setUploadActionHeader () {
-      let session = window.sessionStorage
-      const token = JSON.parse(session.getItem('token'))
       this.headers = {
-        Authorization: 'Bearer ' + token.find(t => t.tokenType === 'accessToken').token
+        Authorization: 'Bearer ' + getCookie('accessToken')
       }
     },
     exportProcessDefinition (isDraft) {
