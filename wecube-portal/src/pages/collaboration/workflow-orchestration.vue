@@ -61,6 +61,7 @@
       </Button>
       <Button type="info" @click="getHeaders">{{ $t('import_flow') }}</Button>
       <Upload
+        v-show="isShowUploadList"
         ref="uploadButton"
         show-upload-list
         accept=".pds"
@@ -73,88 +74,122 @@
         <Button style="display:none">{{ $t('import_flow') }}</Button>
       </Upload>
     </Row>
-    <div v-show="showBpmn" class="containers" ref="content">
-      <div style="height:100%;" class="canvas" ref="canvas"></div>
-      <div id="right_click_menu">
-        <a href="javascript:void(0);" @click="openPluginModal">
-          {{ $t('config_plugin') }}
-        </a>
-        <br />
-      </div>
+    <div v-show="showBpmn" class="split">
+      <Split v-model="splitPanal" mode="vertical">
+        <div slot="top" class="">
+          <div class="containers" ref="content">
+            <div class="canvas" ref="canvas"></div>
 
-      <div id="js-properties-panel" class="panel"></div>
-      <ul class="buttons">
-        <li>
-          <Button @click="resetZoom">Reset Zoom</Button>
-        </li>
-      </ul>
+            <div id="js-properties-panel" class="panel"></div>
+            <ul class="buttons">
+              <li>
+                <Button @click="resetZoom">Reset Zoom</Button>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div slot="bottom" class="split-bottom">
+          <Form
+            ref="pluginConfigForm"
+            :model="pluginForm"
+            label-position="right"
+            :label-width="120"
+            style="margin-right:12px;padding-top: 16px;"
+          >
+            <Row>
+              <Col span="8">
+                <FormItem :label="$t('plugin_type')" prop="serviceName">
+                  <Select filterable clearable v-model="pluginForm.taskCategory">
+                    <Option v-for="(item, index) in taskCategoryList" :value="item.value" :key="index">{{
+                      item.label
+                    }}</Option>
+                  </Select>
+                </FormItem>
+              </Col>
+              <Col span="8">
+                <FormItem :label="$t('locate_rules')" prop="routineExpression">
+                  <PathExp
+                    class="path-exp"
+                    :row="2"
+                    :rootPkg="rootPkg"
+                    :rootEntity="rootEntity"
+                    :allDataModelsWithAttrs="allEntityType"
+                    v-model="pluginForm.routineExpression"
+                  ></PathExp>
+                </FormItem>
+              </Col>
+            </Row>
+            <Row>
+              <Col span="8">
+                <FormItem :label="$t('plugin')" prop="serviceName">
+                  <Select
+                    filterable
+                    clearable
+                    v-model="pluginForm.serviceId"
+                    @on-open-change="getFilteredPluginInterfaceList(pluginForm.routineExpression)"
+                    @on-change="getPluginInterfaceList(false)"
+                  >
+                    <Option v-for="(item, index) in filteredPlugins" :value="item.serviceName" :key="index">{{
+                      item.serviceDisplayName
+                    }}</Option>
+                  </Select>
+                </FormItem>
+              </Col>
+              <Col span="8">
+                <FormItem :label="$t('timeout')" prop="timeoutExpression">
+                  <Select clearable v-model="pluginForm.timeoutExpression">
+                    <Option v-for="(item, index) in timeSelection" :value="item.mins" :key="index"
+                      >{{ item.label }}
+                    </Option>
+                  </Select>
+                </FormItem>
+              </Col>
+              <Col span="8">
+                <FormItem :label="$t('description')" prop="description">
+                  <Input v-model="pluginForm.description" />
+                </FormItem>
+              </Col>
+            </Row>
+            <hr style="margin-bottom: 8px" />
+            <FormItem
+              :label="item.paramName"
+              :prop="item.paramName"
+              v-for="(item, index) in pluginForm.paramInfos"
+              :key="index"
+            >
+              <Select
+                v-model="item.bindNodeId"
+                style="width:30%"
+                v-if="item.bindType === 'context'"
+                @on-change="onParamsNodeChange(index)"
+                @on-open-change="getFlowsNodes"
+              >
+                <Option v-for="(i, index) in currentflowsNodes" :value="i.nodeId" :key="index">{{ i.nodeName }}</Option>
+              </Select>
+              <Select
+                v-model="item.bindParamType"
+                v-if="item.bindType === 'context'"
+                style="width:30%"
+                @on-change="onParamsNodeChange(index)"
+              >
+                <Option v-for="i in paramsTypes" :value="i.value" :key="i.value">{{ i.label }}</Option>
+              </Select>
+              <Select v-if="item.bindType === 'context'" v-model="item.bindParamName" style="width:30%">
+                <Option v-for="i in item.currentParamNames" :value="i.name" :key="i.name">{{ i.name }}</Option>
+              </Select>
+              <Input v-if="item.bindType === 'constant'" v-model="item.bindValue" />
+            </FormItem>
+            <FormItem>
+              <div class="btn-plugin-config">
+                <Button type="primary" @click="savePluginConfig('pluginConfigForm')">{{
+                  $t('savePluginConfig')
+                }}</Button>
+              </div>
+            </FormItem>
+          </Form>
+        </div>
+      </Split>
     </div>
-    <Modal v-model="pluginModalVisible" :title="$t('config_plugin')" width="40">
-      <Form ref="pluginConfigForm" :model="pluginForm" label-position="right" :label-width="150">
-        <FormItem :label="$t('locate_rules')" prop="routineExpression">
-          <PathExp
-            v-if="pluginModalVisible"
-            :rootPkg="rootPkg"
-            :rootEntity="rootEntity"
-            :allDataModelsWithAttrs="allEntityType"
-            v-model="pluginForm.routineExpression"
-          ></PathExp>
-        </FormItem>
-        <FormItem :label="$t('plugin')" prop="serviceName">
-          <Select
-            filterable
-            clearable
-            v-model="pluginForm.serviceId"
-            @on-open-change="getFilteredPluginInterfaceList(pluginForm.routineExpression)"
-            @on-change="getPluginInterfaceList(false)"
-          >
-            <Option v-for="(item, index) in filteredPlugins" :value="item.serviceName" :key="index">{{
-              item.serviceDisplayName
-            }}</Option>
-          </Select>
-        </FormItem>
-        <FormItem :label="$t('timeout')" prop="timeoutExpression">
-          <Select clearable v-model="pluginForm.timeoutExpression">
-            <Option v-for="(item, index) in timeSelection" :value="item.mins" :key="index">{{ item.label }} </Option>
-          </Select>
-        </FormItem>
-        <FormItem :label="$t('description')" prop="description">
-          <Input v-model="pluginForm.description" />
-        </FormItem>
-        <hr style="margin-bottom: 20px" />
-        <FormItem
-          :label="item.paramName"
-          :prop="item.paramName"
-          v-for="(item, index) in pluginForm.paramInfos"
-          :key="index"
-        >
-          <Select
-            v-model="item.bindNodeId"
-            style="width:30%"
-            v-if="item.bindType === 'context'"
-            @on-change="onParamsNodeChange(index)"
-            @on-open-change="getFlowsNodes"
-          >
-            <Option v-for="(i, index) in currentflowsNodes" :value="i.nodeId" :key="index">{{ i.nodeName }}</Option>
-          </Select>
-          <Select
-            v-model="item.bindParamType"
-            v-if="item.bindType === 'context'"
-            style="width:30%"
-            @on-change="onParamsNodeChange(index)"
-          >
-            <Option v-for="i in paramsTypes" :value="i.value" :key="i.value">{{ i.label }}</Option>
-          </Select>
-          <Select v-if="item.bindType === 'context'" v-model="item.bindParamName" style="width:30%">
-            <Option v-for="i in item.currentParamNames" :value="i.name" :key="i.name">{{ i.name }}</Option>
-          </Select>
-          <Input v-if="item.bindType === 'constant'" v-model="item.bindValue" />
-        </FormItem>
-      </Form>
-      <div slot="footer">
-        <Button type="primary" @click="savePluginConfig('pluginConfigForm')">{{ $t('confirm') }}</Button>
-      </div>
-    </Modal>
     <Modal
       v-model="flowRoleManageModal"
       width="700"
@@ -241,8 +276,15 @@ export default {
   },
   data () {
     return {
+      splitPanal: 1,
+      show: false,
+      taskCategoryList: [
+        { value: 'SSTN', label: this.$t('sstn') },
+        { value: 'SUTN', label: this.$t('sutn') }
+      ],
       isSaving: false,
       headers: {},
+      isShowUploadList: false,
       mgmtRolesKeyToFlow: [],
       useRolesKeyToFlow: [],
       currentUserRoles: [],
@@ -270,7 +312,6 @@ export default {
       currentSelectedEntity: '',
       rootPkg: '',
       rootEntity: '',
-      pluginModalVisible: false,
       pluginForm: {},
       defaultPluginForm: {
         description: '',
@@ -335,6 +376,19 @@ export default {
     }
   },
   watch: {
+    show: function (val) {
+      if (val) {
+        this.splitPanal = 0.65
+        this.setCss('ivu-split-trigger-con', 'top: 60%;')
+        this.setCss('bottom-pane', 'top: 60%;')
+        this.setCss('top-pane', 'bottom: 40%;')
+      } else {
+        this.splitPanal = 1
+        this.setCss('ivu-split-trigger-con', 'display: none;')
+        this.setCss('bottom-pane', 'display: none;')
+        this.setCss('top-pane', 'bottom: 0;')
+      }
+    },
     selectedFlow: {
       handler (val, oldVal) {
         this.$refs['currentSelectedEntity'].clearSingleSelect()
@@ -375,8 +429,14 @@ export default {
   },
   mounted () {
     this.initFlow()
+    this.setCss('ivu-split-trigger-con', 'display: none;')
+    this.setCss('bottom-pane', 'display: none;')
+    this.setCss('top-pane', 'bottom: 0;')
   },
   methods: {
+    setCss (className, css) {
+      document.getElementsByClassName(className)[0].style.cssText = css
+    },
     renderRoleNameForTransfer (item) {
       return item.label
     },
@@ -432,7 +492,14 @@ export default {
       }
     },
     confirmRole () {
-      this.flowRoleManageModal = false
+      if (this.mgmtRolesKeyToFlow.length) {
+        this.flowRoleManageModal = false
+        this.showBpmn = true
+      } else {
+        this.$Message.warning(this.$t('mgmt_role_warning'))
+        this.showBpmn = false
+        this.isAdd = false
+      }
     },
     async getRoleList () {
       const { status, data } = await getRoleList()
@@ -470,6 +537,7 @@ export default {
       }
     },
     async getFilteredPluginInterfaceList (path) {
+      if (!path) return
       const pathList = path.split(/[~)>]/)
       const last = pathList[pathList.length - 1].split(':')
       const { status, data } = await getFilteredPluginInterfaceList(last[0], last[1])
@@ -673,9 +741,9 @@ export default {
         nodeId: this.currentNode.id,
         nodeName: this.currentNode.name,
         serviceName: (found && found.serviceName) || '',
-        routineRaw: pluginFormCopy.routineExpression
+        routineRaw: pluginFormCopy.routineExpression,
+        taskCategory: pluginFormCopy.taskCategory
       })
-      this.pluginModalVisible = false
       this.saveDiagram(true)
     },
     async openPluginModal () {
@@ -685,15 +753,21 @@ export default {
           desc: this.$t('select_entity_first')
         })
       } else {
-        this.pluginModalVisible = true
-        this.pluginForm = (this.currentFlow &&
-          this.currentFlow.taskNodeInfos &&
-          this.currentFlow.taskNodeInfos.find(_ => _.nodeId === this.currentNode.id)) || { ...this.defaultPluginForm }
+        this.pluginForm =
+          (this.currentFlow &&
+            this.currentFlow.taskNodeInfos &&
+            this.currentFlow.taskNodeInfos.find(_ => _.nodeId === this.currentNode.id)) ||
+          this.prepareDefaultPluginForm()
         this.getPluginInterfaceList()
         // get flow's params infos
         this.getFlowsNodes()
         this.pluginForm.routineExpression && this.getFilteredPluginInterfaceList(this.pluginForm.routineExpression)
       }
+    },
+    prepareDefaultPluginForm () {
+      let temp = JSON.parse(JSON.stringify(this.defaultPluginForm))
+      temp.routineExpression = this.currentSelectedEntity
+      return { ...temp }
     },
     onParamsNodeChange (index) {
       this.getParamsOptionsByNode(index)
@@ -722,40 +796,16 @@ export default {
         this.$set(this.pluginForm.paramInfos[index], 'currentParamNames', res)
       }
     },
-    bindRightClick () {
-      let menu = document.getElementById('right_click_menu')
-      let elements = document.getElementsByClassName('djs-element djs-shape')
-      const _this = this
-      for (let i = 0; i < elements.length; i++) {
-        elements[i].oncontextmenu = function (e) {
-          e = e || window.event
-          let x = e.clientX
-          let y = e.clientY
-          menu.style.display = 'block'
-          menu.style.left = x - 25 + 'px'
-          menu.style.top = y - 130 + 'px'
-          _this.currentNode.id = e.target.parentNode.getAttribute('data-element-id')
-          let nodeName = ''
-          const previousSibling = e.target.previousSibling
-          if (previousSibling && previousSibling.children[1] && previousSibling.children[1].children) {
-            for (let i = 0; i < previousSibling.children[1].children.length; i++) {
-              nodeName += previousSibling.children[1].children[i].innerHTML || ''
-            }
-          }
-          _this.currentNode.name = nodeName
-          return false
+    bindCurrentNode (e) {
+      this.currentNode.id = e.target.parentNode.getAttribute('data-element-id')
+      let nodeName = ''
+      const previousSibling = e.target.previousSibling
+      if (previousSibling && previousSibling.children[1] && previousSibling.children[1].children) {
+        for (let i = 0; i < previousSibling.children[1].children.length; i++) {
+          nodeName += previousSibling.children[1].children[i].innerHTML || ''
         }
       }
-
-      document.onclick = function (e) {
-        e = e || window.event
-        menu.style.display = 'none'
-      }
-
-      menu.onclick = function (e) {
-        e = e || window.event
-        e.stopPropagation()
-      }
+      this.currentNode.name = nodeName
     },
     async getFlowXml (id) {
       if (!id) return
@@ -767,7 +817,6 @@ export default {
           if (err) {
             console.error(err)
           }
-          _this.bindRightClick()
           _this.serviceTaskBindInfos = data.taskNodeInfos
           _this.currentSelectedEntity = data.rootEntity || ''
           _this.rootPkg = data.rootEntity.split(':')[0] || ''
@@ -778,8 +827,10 @@ export default {
     initFlow () {
       this.container = this.$refs.content
       const canvas = this.$refs.canvas
-      canvas.onmouseup = () => {
-        this.bindRightClick()
+      canvas.onmouseup = e => {
+        this.show = true
+        this.bindCurrentNode(e)
+        this.openPluginModal()
       }
       var customTranslateModule = {
         translate: ['value', customTranslate]
@@ -804,8 +855,10 @@ export default {
           camunda: camundaModdleDescriptor
         }
       })
+      document.getElementsByClassName('djs-palette')[0].classList.remove('two-column')
     },
     getHeaders () {
+      this.isShowUploadList = true
       let refreshRequest = null
       const currentTime = new Date().getTime()
       const accessToken = getCookie('accessToken')
@@ -884,9 +937,8 @@ export default {
 .containers {
   position: absolute;
   background-color: white;
-  border: #999 1px solid;
-  width: 97%;
-  height: 84%;
+  width: 100%;
+  height: 100%;
 }
 .canvas {
   width: 100%;
@@ -906,8 +958,9 @@ export default {
   position: absolute;
   right: 0;
   top: 0;
-  width: 400px;
-  max-height: 100%;
+  width: 300px;
+  min-height: 100%;
+  background: #f8f8f8;
   overflow-y: auto;
 
   .bpp-properties-panel .entry-label {
@@ -920,7 +973,7 @@ export default {
 }
 .buttons {
   position: absolute;
-  left: 20px;
+  left: 44px;
   bottom: 20px;
   & > li {
     display: inline-block;
@@ -946,6 +999,11 @@ export default {
 .bpmn-icon-data-store,
 .bpmn-icon-participant {
   display: none;
+}
+// control toolbar position
+.djs-palette {
+  left: -1px;
+  top: -1px;
 }
 
 // hide panal tab
@@ -987,5 +1045,34 @@ export default {
   font-weight: 700;
   background-color: rgb(226, 222, 222);
   margin-bottom: 5px;
+}
+.ivu-upload-select {
+  display: none !important;
+}
+</style>
+<style scoped lang="scss">
+.split {
+  height: calc(100vh - 145px);
+  border: 1px solid #999;
+  border-bottom: none;
+}
+.split-bottom {
+  position: relative;
+  background: white;
+  left: -1px;
+  margin-right: -2px;
+  border-right: 1px solid #999;
+  border-left: 1px solid #999;
+}
+.ivu-form-item {
+  margin-bottom: 0 !important;
+}
+.path-exp {
+  margin-bottom: 8px;
+  margin-top: 0 !important;
+}
+.btn-plugin-config {
+  float: right;
+  background: white;
 }
 </style>
