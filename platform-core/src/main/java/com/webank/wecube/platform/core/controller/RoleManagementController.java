@@ -1,16 +1,13 @@
 package com.webank.wecube.platform.core.controller;
 
-import com.webank.wecube.platform.core.commons.AuthenticationContextHolder;
 import com.webank.wecube.platform.core.commons.WecubeCoreException;
 import com.webank.wecube.platform.core.dto.CommonResponseDto;
 import com.webank.wecube.platform.core.dto.FavoritesDto;
 import com.webank.wecube.platform.core.dto.user.RoleDto;
 import com.webank.wecube.platform.core.dto.user.RoleMenuDto;
 import com.webank.wecube.platform.core.dto.user.UserDto;
-import com.webank.wecube.platform.core.dto.workflow.ProcDefOutlineDto;
 import com.webank.wecube.platform.core.dto.workflow.ProcRoleRequestDto;
 import com.webank.wecube.platform.core.service.user.RoleFavoritesService;
-import com.webank.wecube.platform.core.service.user.RoleFavoritesServiceImpl;
 import com.webank.wecube.platform.core.service.user.RoleMenuService;
 import com.webank.wecube.platform.core.service.user.UserManagementService;
 import org.slf4j.Logger;

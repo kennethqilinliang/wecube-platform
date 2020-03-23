@@ -1,8 +1,12 @@
 package com.webank.wecube.platform.core.controller;
 
+import com.webank.wecube.platform.core.commons.WecubeCoreException;
 import com.webank.wecube.platform.core.domain.JsonResponse;
+import com.webank.wecube.platform.core.dto.CommonResponseDto;
 import com.webank.wecube.platform.core.dto.PluginConfigDto;
+import com.webank.wecube.platform.core.dto.PluginInterfaceRoleRequestDto;
 import com.webank.wecube.platform.core.dto.TargetEntityFilterRuleDto;
+import com.webank.wecube.platform.core.dto.workflow.ProcRoleRequestDto;
 import com.webank.wecube.platform.core.service.plugin.PluginConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,4 +86,27 @@ public class PluginConfigController {
         return okay();
     }
 
+    @PostMapping("/plugins/interfaces/{plugin-interface-id}/roles")
+    public CommonResponseDto updateProcRoleBinding(@PathVariable("plugin-interface-id") String pluginInterfaceId,
+            @RequestBody PluginInterfaceRoleRequestDto pluginInterfaceRoleRequestDto) {
+        try {
+            pluginConfigService.grantPluginInterfacePermissionToRoles(pluginInterfaceId,
+                    pluginInterfaceRoleRequestDto.getRoleIdList());
+        } catch (WecubeCoreException ex) {
+            return CommonResponseDto.error(ex.getMessage());
+        }
+        return CommonResponseDto.okay();
+    }
+
+    @DeleteMapping("/process/{plugin-interface-id}/roles")
+    public CommonResponseDto deleteProcRoleBinding(@PathVariable("plugin-interface-id") String pluginInterfaceId,
+            @RequestBody PluginInterfaceRoleRequestDto pluginInterfaceRoleRequestDto) {
+        try {
+            pluginConfigService.removePluginInterfacePermissionToRoles(pluginInterfaceId,
+                    pluginInterfaceRoleRequestDto.getRoleIdList());
+        } catch (WecubeCoreException ex) {
+            return CommonResponseDto.error(ex.getMessage());
+        }
+        return CommonResponseDto.okay();
+    }
 }
