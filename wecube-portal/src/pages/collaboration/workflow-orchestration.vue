@@ -80,6 +80,7 @@
         </div>
         <div slot="bottom" class="split-bottom">
           <Form
+            v-if="show"
             ref="pluginConfigForm"
             :model="pluginForm"
             label-position="right"
@@ -381,7 +382,7 @@ export default {
     selectedFlow: {
       handler (val, oldVal) {
         this.currentSelectedEntity = ''
-        // this.$refs['currentSelectedEntity'].clearSingleSelect()
+        this.show = false
         if (val) {
           this.selectedFlowData = this.allFlows.find(_ => {
             return _.procDefId === val
@@ -550,7 +551,7 @@ export default {
       const payload = {
         pkgName: pkg,
         entityName: entity,
-        targetEntityFilterRule: index > 0 ? pathList[pathList.length - 1].slice(index) : null
+        targetEntityFilterRule: index > 0 ? pathList[pathList.length - 1].slice(index) : ''
       }
       const { status, data } = await getPluginsByTargetEntityFilterRule(payload)
       if (status === 'OK') {
@@ -702,7 +703,7 @@ export default {
         }
 
         if (isDraft) {
-          payload.procDefName = _this.selectedFlowData.procDefName
+          payload.procDefName = _this.selectedFlowData.procDefName || 'default'
           saveFlowDraft(payload).then(data => {
             if (data && data.status === 'OK') {
               _this.$Notice.success({
@@ -756,7 +757,7 @@ export default {
       })
       this.saveDiagram(true)
     },
-    async openPluginModal () {
+    async openPluginModal (e) {
       if (!this.currentSelectedEntity) {
         this.$Notice.warning({
           title: 'Warning',
@@ -768,10 +769,14 @@ export default {
             this.currentFlow.taskNodeInfos &&
             this.currentFlow.taskNodeInfos.find(_ => _.nodeId === this.currentNode.id)) ||
           this.prepareDefaultPluginForm()
+        this.pluginForm.routineExpression = this.pluginForm.routineExpression || this.currentSelectedEntity
         this.getPluginInterfaceList()
         // get flow's params infos
         this.getFlowsNodes()
-        this.pluginForm.routineExpression && this.getFilteredPluginInterfaceList(this.pluginForm.routineExpression)
+        this.getFilteredPluginInterfaceList(this.pluginForm.routineExpression)
+        this.$nextTick(() => {
+          this.show = e.target.tagName === 'rect'
+        })
       }
     },
     prepareDefaultPluginForm () {
@@ -838,9 +843,9 @@ export default {
       this.container = this.$refs.content
       const canvas = this.$refs.canvas
       canvas.onmouseup = e => {
-        this.show = e.target.tagName === 'rect'
+        this.show = false
         this.bindCurrentNode(e)
-        this.openPluginModal()
+        this.openPluginModal(e)
       }
       var customTranslateModule = {
         translate: ['value', customTranslate]
