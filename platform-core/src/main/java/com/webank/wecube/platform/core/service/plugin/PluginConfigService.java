@@ -1,14 +1,18 @@
 package com.webank.wecube.platform.core.service.plugin;
 
 import com.webank.wecube.platform.core.commons.WecubeCoreException;
+import com.webank.wecube.platform.core.domain.RolePluginInterface;
 import com.webank.wecube.platform.core.domain.plugin.*;
 import com.webank.wecube.platform.core.dto.PluginConfigDto;
 import com.webank.wecube.platform.core.dto.PluginConfigInterfaceDto;
+import com.webank.wecube.platform.core.dto.PluginInterfaceRoleRequestDto;
 import com.webank.wecube.platform.core.dto.TargetEntityFilterRuleDto;
 import com.webank.wecube.platform.core.jpa.PluginConfigInterfaceRepository;
 import com.webank.wecube.platform.core.jpa.PluginConfigRepository;
 import com.webank.wecube.platform.core.jpa.PluginPackageEntityRepository;
 import com.webank.wecube.platform.core.jpa.PluginPackageRepository;
+
+import net.bytebuddy.asm.Advice.Return;
 
 import com.webank.wecube.platform.core.jpa.*;
 import org.apache.commons.lang3.StringUtils;
@@ -18,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -328,13 +333,32 @@ public class PluginConfigService {
         }
     }
 
-    public void grantPluginInterfacePermissionToRoles(String pluginInterfaceId,List<String> roleList) {
-        
-        
+    public List<RolePluginInterface> getPluginInterfacePermissionById(String pluginInterfaceId) {
+        Optional<List<RolePluginInterface>> rolePluginInterfaceOptional = rolePluginInterfaceRepository
+                .findAllByPluginInterfaceId(pluginInterfaceId);
+        if (rolePluginInterfaceOptional.isPresent()) {
+            return rolePluginInterfaceOptional.get();
+        }
+        return new ArrayList<RolePluginInterface>();
     }
-    
-    public void removePluginInterfacePermissionToRoles(String pluginInterfaceId,List<String> roleList) {
-        
-        
+
+    public void grantPluginInterfacePermissionToRoles(String pluginInterfaceId,
+            PluginInterfaceRoleRequestDto pluginInterfaceRoleRequestDto) {
+        for (String roleName : pluginInterfaceRoleRequestDto.getRoleNameList()) {
+            if (!rolePluginInterfaceRepository.existsRolePluginInterfaceByRoleNameAndPluginInterfaceId(roleName,
+                    pluginInterfaceId)) {
+                rolePluginInterfaceRepository.save(new RolePluginInterface(roleName, pluginInterfaceId));
+            }
+        }
+    }
+
+    public void removePluginInterfacePermissionToRoles(String pluginInterfaceId,
+            PluginInterfaceRoleRequestDto pluginInterfaceRoleRequestDto) {
+        for (String roleName : pluginInterfaceRoleRequestDto.getRoleNameList()) {
+            rolePluginInterfaceRepository.findByRoleNameAndPluginInterfaceId(roleName, pluginInterfaceId)
+                    .forEach(rolePluginInterface -> {
+                        rolePluginInterfaceRepository.delete(rolePluginInterface);
+                    });
+        }
     }
 }

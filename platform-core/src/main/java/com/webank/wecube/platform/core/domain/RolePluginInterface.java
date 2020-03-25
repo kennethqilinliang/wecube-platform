@@ -1,5 +1,6 @@
 package com.webank.wecube.platform.core.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.webank.wecube.platform.core.utils.Constants;
 
 import javax.persistence.*;
@@ -10,6 +11,7 @@ import java.util.Objects;
 public class RolePluginInterface {
 
     @Id
+    @JsonIgnore
     private String id;
 
     @Column(name = "role_name")

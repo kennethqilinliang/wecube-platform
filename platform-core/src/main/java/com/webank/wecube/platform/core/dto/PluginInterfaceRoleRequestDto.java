@@ -5,21 +5,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public class PluginInterfaceRoleRequestDto {
-    @JsonProperty(value = "roleIdList")
-    List<String> roleIdList;
+    @JsonProperty(value = "roleNameList")
+    List<String> roleNameList;
 
     public PluginInterfaceRoleRequestDto() {
     }
 
     public PluginInterfaceRoleRequestDto(List<String> roleIdList) {
-        this.roleIdList = roleIdList;
+        this.roleNameList = roleIdList;
     }
 
-    public List<String> getRoleIdList() {
-        return roleIdList;
+    public List<String> getRoleNameList() {
+        return roleNameList;
     }
 
-    public void setRoleIdList(List<String> roleIdList) {
-        this.roleIdList = roleIdList;
+    public void setRoleNameList(List<String> roleNameList) {
+        this.roleNameList = roleNameList;
     }
 }

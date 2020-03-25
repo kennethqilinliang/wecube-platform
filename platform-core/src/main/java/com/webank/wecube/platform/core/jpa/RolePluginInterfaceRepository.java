@@ -11,6 +11,9 @@ public interface RolePluginInterfaceRepository extends CrudRepository<RolePlugin
 
     Optional<List<RolePluginInterface>> findAllByRoleName(String roleName);
 
-    Boolean existsRoleMenuByRoleNameAndPluginInterfaceId(String roleName, String pluginInterfaceId);
+    Boolean existsRolePluginInterfaceByRoleNameAndPluginInterfaceId(String roleName, String pluginInterfaceId);
 
+    List<RolePluginInterface> findByRoleNameAndPluginInterfaceId(String roleName, String pluginInterfaceId);
+
+    Optional<List<RolePluginInterface>> findAllByPluginInterfaceId(String pluginInterfaceId);
 }

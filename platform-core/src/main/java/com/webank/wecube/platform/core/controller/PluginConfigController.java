@@ -86,24 +86,29 @@ public class PluginConfigController {
         return okay();
     }
 
+    @GetMapping("/plugins/interfaces/{plugin-interface-id}/roles")
+    public CommonResponseDto getPluginInterfacePermission(
+            @PathVariable("plugin-interface-id") String pluginInterfaceId) {
+        return CommonResponseDto.okayWithData(pluginConfigService.getPluginInterfacePermissionById(pluginInterfaceId));
+    }
+
     @PostMapping("/plugins/interfaces/{plugin-interface-id}/roles")
-    public CommonResponseDto updateProcRoleBinding(@PathVariable("plugin-interface-id") String pluginInterfaceId,
+    public CommonResponseDto grantPluginInterfacePermissionToRoles(@PathVariable("plugin-interface-id") String pluginInterfaceId,
             @RequestBody PluginInterfaceRoleRequestDto pluginInterfaceRoleRequestDto) {
         try {
-            pluginConfigService.grantPluginInterfacePermissionToRoles(pluginInterfaceId,
-                    pluginInterfaceRoleRequestDto.getRoleIdList());
+            pluginConfigService.grantPluginInterfacePermissionToRoles(pluginInterfaceId, pluginInterfaceRoleRequestDto);
         } catch (WecubeCoreException ex) {
             return CommonResponseDto.error(ex.getMessage());
         }
         return CommonResponseDto.okay();
     }
 
-    @DeleteMapping("/process/{plugin-interface-id}/roles")
-    public CommonResponseDto deleteProcRoleBinding(@PathVariable("plugin-interface-id") String pluginInterfaceId,
+    @DeleteMapping("/plugins/interfaces/{plugin-interface-id}/roles")
+    public CommonResponseDto removePluginInterfacePermissionToRoles(@PathVariable("plugin-interface-id") String pluginInterfaceId,
             @RequestBody PluginInterfaceRoleRequestDto pluginInterfaceRoleRequestDto) {
         try {
             pluginConfigService.removePluginInterfacePermissionToRoles(pluginInterfaceId,
-                    pluginInterfaceRoleRequestDto.getRoleIdList());
+                    pluginInterfaceRoleRequestDto);
         } catch (WecubeCoreException ex) {
             return CommonResponseDto.error(ex.getMessage());
         }
