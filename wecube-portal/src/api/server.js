@@ -124,4 +124,27 @@ export const dmeIntegratedQuery = data => req.post(`/platform/v1/data-model/dme/
 export const entityView = (packageName, entityName) =>
   req.get(`/platform/v1/models/package/${packageName}/entity/${entityName}/attributes`)
 export const batchExecution = data => req.post(`/platform/v1/batch-execution/run`, data)
+export const deleteCollectionsRole = (id, data) => req.delete(`/platform/v1/roles/${id}/favorites`, { data })
+export const addCollectionsRole = (id, data) => req.post(`/platform/v1/roles/${id}/favorites`, data)
+export const getAllCollections = data => req.get(`/platform/v1/roles/favorites/retrieve`)
+export const deleteCollections = id => req.delete(`/platform/v1/roles/favorites/${id}/delete`)
+export const saveBatchExecution = data => req.post(`/platform/v1/roles/favorites/create`, data)
+export const updateCollections = data => req.post(`/platform/v1/roles/favorites/update`, data)
 export const getVariableScope = () => req.get(`/platform/v1/system-variables/constant/system-variable-scope`)
+export const getPluginConfigsByPackageId = packageId => req.get(`/platform/v1/packages/${packageId}/plugin-configs`)
+export const getInterfacesByPluginConfigId = configId => req.get(`/platform/v1/plugins/interfaces/${configId}`)
+export const getEntityRefsByPkgNameAndEntityName = (pkgName, entityName) =>
+  req.get(`/platform/v1/models/package/${pkgName}/entity/${entityName}`)
+export const getPluginsByTargetEntityFilterRule = data =>
+  req.post(
+    `/platform/v1/plugins/interfaces/package/${data.pkgName}/entity/${data.entityName}/enabled/query-by-target-entity-filter-rule`,
+    data
+  )
+export const getDataByNodeDefIdAndProcessSessionId = (nodeDefId, ProcessSessionId) =>
+  req.get(`/platform/v1/process/instances/tasknodes/${nodeDefId}/session/${ProcessSessionId}/tasknode-bindings`)
+export const setDataByNodeDefIdAndProcessSessionId = (nodeDefId, ProcessSessionId, data) =>
+  req.post(`/platform/v1/process/instances/tasknodes/${nodeDefId}/session/${ProcessSessionId}/tasknode-bindings`, data)
+export const getAllBindingsProcessSessionId = ProcessSessionId =>
+  req.get(`/platform/v1/process/instances/tasknodes/session/${ProcessSessionId}/tasknode-bindings`)
+export const getTargetModelByProcessDefId = id => req.get(`/platform/v1/process/definitions/${id}/root-entities`)
+export const getPreviewEntitiesByInstancesId = id => req.get(`/platform/v1/process/instances/${id}/preview/entities`)

@@ -17,9 +17,9 @@ import com.webank.wecube.platform.core.entity.workflow.TaskNodeDefInfoEntity;
 import com.webank.wecube.platform.core.entity.workflow.TaskNodeExecParamEntity;
 import com.webank.wecube.platform.core.entity.workflow.TaskNodeExecRequestEntity;
 import com.webank.wecube.platform.core.entity.workflow.TaskNodeInstInfoEntity;
-import com.webank.wecube.platform.core.model.datamodel.DataModelExpressionToRootData;
 import com.webank.wecube.platform.core.model.workflow.PluginInvocationCommand;
 import com.webank.wecube.platform.core.model.workflow.PluginInvocationResult;
+import com.webank.wecube.platform.core.service.dme.EntityOperationRootCondition;
 import com.webank.wecube.platform.core.service.workflow.PluginInvocationProcessor.PluginInterfaceInvocationContext;
 
 @Service
@@ -136,7 +136,8 @@ public class AsyncPluginInvocationService extends AbstractPluginInvocationServic
             log.error("result data handling failed", e);
             result.setResultCode(RESULT_CODE_ERR);
             pluginInvocationResultService.responsePluginInterfaceInvocation(result);
-            handlePluginInterfaceInvocationFailure(ctx, "101", "result data handling failed:" + e.getMessage());
+            String errMsg = e.getMessage() == null ? "error" : trimWithMaxLength(e.getMessage());
+            handlePluginInterfaceInvocationFailure(ctx, "101", "result data handling failed:" + errMsg);
         }
 
         return;
@@ -350,9 +351,9 @@ public class AsyncPluginInvocationService extends AbstractPluginInvocationServic
                 continue;
             }
 
-            DataModelExpressionToRootData dmeCriteria = new DataModelExpressionToRootData(paramExpr, nodeEntityId);
+            EntityOperationRootCondition condition = new EntityOperationRootCondition(paramExpr, nodeEntityId);
 
-            this.expressionService.writeBackData(dmeCriteria, retVal);
+            this.entityOperationService.update(condition, retVal);
 
         }
     }

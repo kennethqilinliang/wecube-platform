@@ -11,7 +11,7 @@
         <BreadcrumbItem>{{ parentBreadcrumb }}</BreadcrumbItem>
         <BreadcrumbItem>{{ childBreadcrumb }}</BreadcrumbItem>
       </Breadcrumb>
-      <router-view class="pages" :key="$route.name"></router-view>
+      <router-view class="pages" style="padding: 0" :key="$route.name"></router-view>
     </div>
     <BackTop :height="100" :bottom="100" />
   </div>
@@ -59,6 +59,11 @@ export default {
       } else {
         this.parentBreadcrumb = '-'
         this.childBreadcrumb = this.$route.path.substr(1)
+        if (!window.implicitRoutes) {
+          return
+        }
+        const implicitRoute = window.implicitRoutes[this.childBreadcrumb]
+        this.parentBreadcrumb = implicitRoute ? implicitRoute[currentLangKey] : '-'
       }
     },
     homePageClickHandler () {

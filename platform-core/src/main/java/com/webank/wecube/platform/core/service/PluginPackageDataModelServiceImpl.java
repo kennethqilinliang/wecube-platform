@@ -7,11 +7,14 @@ import com.google.common.collect.Sets;
 import com.webank.wecube.platform.core.commons.ApplicationProperties;
 import com.webank.wecube.platform.core.commons.WecubeCoreException;
 import com.webank.wecube.platform.core.domain.JsonResponse;
+import com.webank.wecube.platform.core.domain.plugin.PluginConfig;
 import com.webank.wecube.platform.core.domain.plugin.PluginPackage;
 import com.webank.wecube.platform.core.domain.plugin.PluginPackageAttribute;
 import com.webank.wecube.platform.core.domain.plugin.PluginPackageDataModel;
 import com.webank.wecube.platform.core.domain.plugin.PluginPackageEntity;
 import com.webank.wecube.platform.core.dto.*;
+import com.webank.wecube.platform.core.dto.PluginPackageEntityDto.TrimmedPluginPackageEntityDto;
+import com.webank.wecube.platform.core.jpa.PluginConfigRepository;
 import com.webank.wecube.platform.core.jpa.PluginPackageAttributeRepository;
 import com.webank.wecube.platform.core.jpa.PluginPackageDataModelRepository;
 import com.webank.wecube.platform.core.jpa.PluginPackageEntityRepository;
@@ -56,6 +59,8 @@ public class PluginPackageDataModelServiceImpl implements PluginPackageDataModel
     private RestTemplate restTemplate;
     @Autowired
     private PluginPackageEntityRepository pluginPackageEntityRepository;
+    @Autowired
+    private PluginConfigRepository pluginConfigRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(PluginPackageDataModelServiceImpl.class);
 
@@ -276,51 +281,96 @@ public class PluginPackageDataModelServiceImpl implements PluginPackageDataModel
      */
     private void updateReferenceInfo(List<PluginPackageEntityDto> inputEntityDtoList) {
         for (PluginPackageEntityDto inputEntityDto : inputEntityDtoList) {
-            // query for the referenceBy info
-            String packageName = inputEntityDto.getPackageName();
-            String entityName = inputEntityDto.getName();
-            int dataModelVersion = 0;
+            updateReferenceInfo(inputEntityDto);
+        }
+    }
+    
+    private void updateReferenceInfo(PluginPackageEntityDto inputEntityDto) {
+        // query for the referenceBy info
+        String packageName = inputEntityDto.getPackageName();
+        String entityName = inputEntityDto.getName();
+        int dataModelVersion = 0;
 
-            Optional<PluginPackageDataModel> latestDataModelByPackageName = dataModelRepository.findLatestDataModelByPackageName(packageName);
-            if (latestDataModelByPackageName.isPresent()) {
-                dataModelVersion = latestDataModelByPackageName.get().getVersion();
+        Optional<PluginPackageDataModel> latestDataModelByPackageName = dataModelRepository.findLatestDataModelByPackageName(packageName);
+        if (latestDataModelByPackageName.isPresent()) {
+            dataModelVersion = latestDataModelByPackageName.get().getVersion();
+        }
+        // find "reference by" info by latest data model version
+        Optional<List<PluginPackageAttribute>> allAttributeReferenceByList = pluginPackageAttributeRepository.findAllChildrenAttributes(packageName, entityName, dataModelVersion);
+
+        allAttributeReferenceByList.ifPresent(attributeList -> attributeList.forEach(attribute -> {
+            // the process of found reference by info
+            PluginPackageEntity referenceByEntity = attribute.getPluginPackageEntity();
+            if (!packageName.equals(referenceByEntity.getPackageName()) ||
+                    !entityName.equals(referenceByEntity.getName())) {
+                // only add the dto to set when the attribute doesn't belong to this input entity
+                inputEntityDto.updateReferenceBy(
+                        referenceByEntity.getId(),
+                        referenceByEntity.getPackageName(),
+                        referenceByEntity.getDataModelVersion(),
+                        referenceByEntity.getName(),
+                        referenceByEntity.getDisplayName(), 
+                        PluginPackageAttributeDto.fromDomain(attribute));
             }
-            // find "reference by" info by latest data model version
-            Optional<List<PluginPackageAttribute>> allAttributeReferenceByList = pluginPackageAttributeRepository.findAllChildrenAttributes(packageName, entityName, dataModelVersion);
+        }));
 
-            allAttributeReferenceByList.ifPresent(attributeList -> attributeList.forEach(attribute -> {
-                // the process of found reference by info
-                PluginPackageEntity referenceByEntity = attribute.getPluginPackageEntity();
-                if (!packageName.equals(referenceByEntity.getPackageName()) ||
-                        !entityName.equals(referenceByEntity.getName())) {
-                    // only add the dto to set when the attribute doesn't belong to this input entity
-                    inputEntityDto.updateReferenceBy(
-                            referenceByEntity.getId(),
-                            referenceByEntity.getPackageName(),
-                            referenceByEntity.getDataModelVersion(),
-                            referenceByEntity.getName(),
-                            referenceByEntity.getDisplayName());
-                }
-            }));
+        // query for the referenceTo info
+        List<PluginPackageAttributeDto> attributes = inputEntityDto.getAttributes();
+        if (!CollectionUtils.isEmpty(attributes)) {
+            attributes.forEach(attributeDto -> {
+                        dataModelRepository.findLatestDataModelByPackageName(attributeDto.getRefPackageName()).ifPresent(dataModel ->
+                                dataModel.getPluginPackageEntities().stream().filter(entity -> attributeDto.getRefEntityName().equals(entity.getName())).findAny().ifPresent(entity -> {
+                                    PluginPackageEntityDto entityReferenceToDto = PluginPackageEntityDto.fromDomain(entity);
+                                    inputEntityDto.updateReferenceTo(
+                                            entityReferenceToDto.getId(),
+                                            entityReferenceToDto.getPackageName(),
+                                            entityReferenceToDto.getDataModelVersion(),
+                                            entityReferenceToDto.getName(),
+                                            entityReferenceToDto.getDisplayName(),
+                                            attributeDto
+                                    );
+                                }));
+                    }
+            );
+        }
+    }
 
-            // query for the referenceTo info
-            List<PluginPackageAttributeDto> attributes = inputEntityDto.getAttributes();
-            if (!CollectionUtils.isEmpty(attributes)) {
-                attributes.forEach(attributeDto -> {
-                            dataModelRepository.findLatestDataModelByPackageName(attributeDto.getRefPackageName()).ifPresent(dataModel ->
-                                    dataModel.getPluginPackageEntities().stream().filter(entity -> attributeDto.getRefEntityName().equals(entity.getName())).findAny().ifPresent(entity -> {
-                                        PluginPackageEntityDto entityReferenceToDto = PluginPackageEntityDto.fromDomain(entity);
-                                        inputEntityDto.updateReferenceTo(
-                                                entityReferenceToDto.getId(),
-                                                entityReferenceToDto.getPackageName(),
-                                                entityReferenceToDto.getDataModelVersion(),
-                                                entityReferenceToDto.getName(),
-                                                entityReferenceToDto.getDisplayName()
-                                        );
-                                    }));
-                        }
-                );
-            }
+    private void updateReferenceInfoIncludeSelfReference(PluginPackageEntityDto inputEntityDto) {
+        String packageName = inputEntityDto.getPackageName();
+        String entityName = inputEntityDto.getName();
+        int dataModelVersion = 0;
+
+        Optional<PluginPackageDataModel> latestDataModelByPackageName = dataModelRepository
+                .findLatestDataModelByPackageName(packageName);
+        if (latestDataModelByPackageName.isPresent()) {
+            dataModelVersion = latestDataModelByPackageName.get().getVersion();
+        }
+        Optional<List<PluginPackageAttribute>> allAttributeReferenceByList = pluginPackageAttributeRepository
+                .findAllChildrenAttributes(packageName, entityName, dataModelVersion);
+
+        allAttributeReferenceByList.ifPresent(attributeList -> attributeList.forEach(attribute -> {
+            PluginPackageEntity referenceByEntity = attribute.getPluginPackageEntity();
+            inputEntityDto.updateReferenceBy(referenceByEntity.getId(), referenceByEntity.getPackageName(),
+                    referenceByEntity.getDataModelVersion(), referenceByEntity.getName(),
+                    referenceByEntity.getDisplayName(), PluginPackageAttributeDto.fromDomain(attribute));
+
+        }));
+
+        List<PluginPackageAttributeDto> attributes = inputEntityDto.getAttributes();
+        if (!CollectionUtils.isEmpty(attributes)) {
+            attributes.forEach(attributeDto -> {
+                dataModelRepository.findLatestDataModelByPackageName(attributeDto.getRefPackageName())
+                        .ifPresent(dataModel -> dataModel.getPluginPackageEntities().stream()
+                                .filter(entity -> attributeDto.getRefEntityName().equals(entity.getName())).findAny()
+                                .ifPresent(entity -> {
+                                    PluginPackageEntityDto entityReferenceToDto = PluginPackageEntityDto
+                                            .fromDomain(entity);
+                                    inputEntityDto.updateReferenceTo(entityReferenceToDto.getId(),
+                                            entityReferenceToDto.getPackageName(),
+                                            entityReferenceToDto.getDataModelVersion(), entityReferenceToDto.getName(),
+                                            entityReferenceToDto.getDisplayName(), attributeDto);
+                                }));
+            });
         }
     }
 
@@ -505,5 +555,63 @@ public class PluginPackageDataModelServiceImpl implements PluginPackageDataModel
         return latestDataModelByPackageNameOpt.get().getVersion();
     }
 
+    public DataModelEntityDto getEntityByPackageNameAndName(String packageName, String entityName) {
+        DataModelEntityDto dataModelEntityDto = new DataModelEntityDto();
+
+        Optional<PluginPackageDataModel> dataModelOptional = dataModelRepository
+                .findLatestDataModelByPackageName(packageName);
+        if (!dataModelOptional.isPresent()) {
+            return dataModelEntityDto;
+        }
+        Optional<PluginPackageEntity> entityOptional = pluginPackageEntityRepository
+                .findByPackageNameAndNameAndDataModelVersion(packageName, entityName,
+                        dataModelOptional.get().getVersion());
+        if (!entityOptional.isPresent()) {
+            return dataModelEntityDto;
+        }
+        dataModelEntityDto = DataModelEntityDto.fromDomain(entityOptional.get());
+        updateReferenceInfoIncludeSelfReference(dataModelEntityDto);
+
+        List<BindedInterfaceEntityDto> referenceToEntityList = new ArrayList<BindedInterfaceEntityDto>();
+        List<BindedInterfaceEntityDto> referenceByEntityList = new ArrayList<BindedInterfaceEntityDto>();
+
+        List<PluginConfig> bindedInterfacesConfigs = pluginConfigRepository
+                .findAllPluginConfigGroupByTargetEntityWithFilterRule();
+        if (bindedInterfacesConfigs == null || bindedInterfacesConfigs.size() == 0) {
+            return dataModelEntityDto;
+        }
+
+        for (PluginConfig config : bindedInterfacesConfigs) {
+            buildLeafEntity(referenceToEntityList,dataModelEntityDto.getReferenceToEntityList(),config);
+            buildLeafEntity(referenceByEntityList,dataModelEntityDto.getReferenceByEntityList(),config);
+        }
+
+        dataModelEntityDto.getLeafEntityList().setReferenceToEntityList(referenceToEntityList);
+        dataModelEntityDto.getLeafEntityList().setReferenceByEntityList(referenceByEntityList);
+
+        return dataModelEntityDto;
+    }
+
+    private void buildLeafEntity(List<BindedInterfaceEntityDto> leafEntityList,
+            List<TrimmedPluginPackageEntityDto> entityDtoList, PluginConfig config) {
+        for (TrimmedPluginPackageEntityDto entityDto : entityDtoList) {
+            if (entityDto.getPackageName().equals(config.getTargetPackage())
+                    && entityDto.getName().equals(config.getTargetEntity())) {
+                boolean entityExistedFlag = false;
+                for (BindedInterfaceEntityDto bindedInterfaceEntityDto : leafEntityList) {
+                    if (bindedInterfaceEntityDto.getPackageName().equals(config.getTargetPackage())
+                            && bindedInterfaceEntityDto.getEntityName().equals(config.getTargetEntity())
+                            && bindedInterfaceEntityDto.getFilterRule()
+                                    .equals(config.getTargetEntityWithFilterRule())) {
+                        entityExistedFlag = true;
+                    }
+                }
+                if (!entityExistedFlag) {
+                    leafEntityList.add(new BindedInterfaceEntityDto(config.getTargetPackage(), config.getTargetEntity(),
+                            config.getTargetEntityWithFilterRule()));
+                }
+            }
+        }
+    }
 
 }

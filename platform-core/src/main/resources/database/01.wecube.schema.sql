@@ -126,6 +126,7 @@ CREATE TABLE `plugin_configs` (
   `name` VARCHAR(100) NOT NULL,
   `target_package` VARCHAR(63) NULL DEFAULT NULL,
   `target_entity` VARCHAR(100) NULL,
+  `target_entity_filter_rule` VARCHAR(1024) NULL DEFAULT '',
   `register_name` VARCHAR(100) NULL DEFAULT NULL,
   `status` VARCHAR(20) NOT NULL default 'DISABLED'
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ;
@@ -140,7 +141,8 @@ create table plugin_config_interfaces (
     `path` VARCHAR(500) NOT NULL, 
     `http_method` VARCHAR(10) NOT NULL, 
     `is_async_processing` VARCHAR(1) DEFAULT 'N',
-    `type` VARCHAR(16) DEFAULT 'EXECUTION'
+    `type` VARCHAR(16) DEFAULT 'EXECUTION',
+    `filter_rule` VARCHAR(1024) NULL DEFAULT ''
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ;
 
 drop table if exists plugin_config_interface_parameters;
@@ -185,7 +187,7 @@ create table plugin_package_resource_files
 
 drop table if exists resource_server;
 CREATE TABLE `resource_server` (
-    `id` VARCHAR(64) PRIMARY KEY,
+    `id` VARCHAR(255) PRIMARY KEY,
     `created_by` VARCHAR(255) NULL DEFAULT NULL ,
     `created_date` DATETIME NULL DEFAULT NULL,
     `host` VARCHAR(255) NULL DEFAULT NULL ,
@@ -203,7 +205,7 @@ CREATE TABLE `resource_server` (
 
 drop table if exists resource_item;
 CREATE TABLE `resource_item` (
-    `id` VARCHAR(64) PRIMARY KEY,
+    `id` VARCHAR(255) PRIMARY KEY,
     `additional_properties` VARCHAR(2048) NULL DEFAULT NULL,
     `created_by` VARCHAR(255) NULL DEFAULT NULL,
     `created_date` DATETIME NULL DEFAULT NULL,
@@ -314,5 +316,27 @@ CREATE TABLE `execution_job_parameters` (
     INDEX `FK_execution_job_parameters_execution_jobs` (`execution_job_id`),
     CONSTRAINT `FK_execution_job_parameters_execution_jobs` FOREIGN KEY (`execution_job_id`) REFERENCES `execution_jobs` (`id`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `favorites`;
+CREATE TABLE `favorites` (
+  `favorites_id` varchar(255) NOT NULL,
+  `created_by` varchar(255) DEFAULT NULL,
+  `created_time` datetime DEFAULT NULL,
+  `updated_by` varchar(255) DEFAULT NULL,
+  `updated_time` datetime DEFAULT NULL,
+  `collection_name` varchar(255) NOT NULL,
+  `data` blob,
+  PRIMARY KEY (`favorites_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `favorites_role`;
+CREATE TABLE `favorites_role` (
+  `id` varchar(255) NOT NULL,
+  `favorites_id` varchar(255) DEFAULT NULL,
+  `permission` varchar(255) DEFAULT NULL,
+  `role_id` varchar(255) DEFAULT NULL,
+  `role_name` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 SET FOREIGN_KEY_CHECKS = 1;
