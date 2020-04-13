@@ -1542,4 +1542,28 @@ CREATE TABLE `core_operation_event` (
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS `core_ru_task_node_exec_req`;
+CREATE TABLE `core_ru_task_node_exec_req` (
+  `req_id` varchar(255) NOT NULL,
+  `created_by` varchar(255) DEFAULT NULL,
+  `created_time` datetime DEFAULT NULL,
+  `updated_by` varchar(255) DEFAULT NULL,
+  `updated_time` datetime DEFAULT NULL,
+  `is_completed` bit(1) DEFAULT NULL,
+  `is_current` bit(1) DEFAULT NULL,
+  `err_code` varchar(255) DEFAULT NULL,
+  `err_msg` varchar(255) DEFAULT NULL,
+  `node_inst_id` int(11) DEFAULT NULL,
+  `req_url` varchar(255) DEFAULT NULL,
+  `execution_id` varchar(255) DEFAULT NULL,
+  `node_id` varchar(255) DEFAULT NULL,
+  `node_name` varchar(255) DEFAULT NULL,
+  `proc_def_kernel_id` varchar(255) DEFAULT NULL,
+  `proc_def_kernel_key` varchar(255) DEFAULT NULL,
+  `proc_def_ver` int(11) DEFAULT NULL,
+  `proc_inst_kernel_id` varchar(255) DEFAULT NULL,
+  `proc_inst_kernel_key` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`req_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 SET FOREIGN_KEY_CHECKS = 1;
