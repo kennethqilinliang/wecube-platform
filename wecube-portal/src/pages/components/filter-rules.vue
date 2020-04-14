@@ -89,7 +89,7 @@
               e.key_name
             }}</Option>
           </Select>
-          <span v-if="rule.op === 'is' || rule.op === 'isnot'">null</span>
+          <span v-if="rule.op === 'is' || rule.op === 'isnot'">NULL</span>
         </Col>
       </Row>
       <Row style="margin-top: 10px">
@@ -120,6 +120,9 @@ export default {
     }
   },
   props: {
+    rootEntity: {
+      required: false
+    },
     value: {
       required: false
     },
@@ -144,6 +147,13 @@ export default {
     allDataModelsWithAttrs: {
       handler (val) {
         this.formatCurrentOptions()
+      }
+    },
+    rootEntity: {
+      handler (val) {
+        this.restorePathExp(val)
+        this.$emit('input', this.fullPathExp)
+        this.$emit('change', this.fullPathExp)
       }
     }
   },
@@ -289,19 +299,21 @@ export default {
     okHandler () {
       this.modelVisable = false
       let rules = ''
-      this.currentPathFilterRules.forEach((rule, index) => {
-        const isMultiple = Array.isArray(rule.value)
-        let str = ''
-        if (isMultiple) {
-          str = `{${rule.attr} ${rule.op} [${rule.value.map(v => `'${v}'`)}]}`
-        } else if (rule.op === 'is' || rule.op === 'isnot') {
-          str = `{${rule.attr} ${rule.op} null}`
-        } else {
-          const noQuotation = rule.op === 'gt' || rule.op === 'lt'
-          str = noQuotation ? `{${rule.attr} ${rule.op} ${rule.value}}` : `{${rule.attr} ${rule.op} '${rule.value}'}`
-        }
-        rules += str
-      })
+      this.currentPathFilterRules
+        .filter(r => r.op && r.attr)
+        .forEach((rule, index) => {
+          const isMultiple = Array.isArray(rule.value)
+          let str = ''
+          if (isMultiple) {
+            str = `{${rule.attr} ${rule.op} [${rule.value.map(v => `'${v}'`)}]}`
+          } else if (rule.op === 'is' || rule.op === 'isnot') {
+            str = `{${rule.attr} ${rule.op} NULL}`
+          } else {
+            const noQuotation = rule.op === 'gt' || rule.op === 'lt'
+            str = noQuotation ? `{${rule.attr} ${rule.op} ${rule.value}}` : `{${rule.attr} ${rule.op} '${rule.value}'}`
+          }
+          rules += str
+        })
       this.pathList[this.currentNodeIndex].pathExp = this.pathList[this.currentNodeIndex].pathExp.split('{')[0] + rules
       this.currentPathFilterRules = []
       this.$emit('input', this.fullPathExp)
@@ -473,6 +485,12 @@ export default {
   },
   mounted () {
     // this.bindPastePathExp()
+    if (!this.value && this.rootEntity) {
+      this.restorePathExp(this.rootEntity)
+      this.$emit('input', this.fullPathExp)
+      this.$emit('change', this.fullPathExp)
+      return
+    }
     this.formatFirstCurrentOptions()
   }
 }

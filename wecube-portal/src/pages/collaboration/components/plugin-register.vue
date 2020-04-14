@@ -169,6 +169,7 @@
                                 v-model="param.mappingEntityExpression"
                                 :disabled="currentPluginObj.status === 'ENABLED'"
                                 :allDataModelsWithAttrs="allEntityType"
+                                :rootEntity="selectedEntityType"
                                 :needNativeAttr="true"
                                 :needAttr="true"
                               ></FilterRules>
@@ -254,6 +255,7 @@
                                 v-model="outPut.mappingEntityExpression"
                                 :disabled="currentPluginObj.status === 'ENABLED'"
                                 :allDataModelsWithAttrs="allEntityType"
+                                :rootEntity="selectedEntityType"
                                 :needNativeAttr="true"
                                 :needAttr="true"
                               ></FilterRules>
@@ -400,8 +402,8 @@ export default {
         })
         return
       }
-      this.currentPluginObj.registerName = this.registerName
       let currentPluginForSave = JSON.parse(JSON.stringify(this.currentPluginObj))
+      currentPluginForSave.registerName = this.registerName
       currentPluginForSave.targetEntityWithFilterRule = this.selectedEntityType
       if (this.hasNewSource) {
         delete currentPluginForSave.id
