@@ -103,6 +103,8 @@ public class DynamicRouteConfigurationService implements ApplicationEventPublish
         if (log.isInfoEnabled()) {
             log.info("delete result:{}", result);
         }
+        
+        this.routeItems.remove(routeName);
     }
     
     protected void refreshRoutes(Long time) {
