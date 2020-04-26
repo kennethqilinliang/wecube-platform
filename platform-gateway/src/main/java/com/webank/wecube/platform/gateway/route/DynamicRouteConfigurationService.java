@@ -165,9 +165,38 @@ public class DynamicRouteConfigurationService implements ApplicationEventPublish
             info.setPort(d.getPort());
 
             routeItemInfos.add(info);
+            
+            tryAddRouteDefinition(d);
         }
 
         DynamicRouteItemInfoHolder.refreshDynamicRouteItemInfos(routeItemInfos);
+    }
+    
+    private void tryAddRouteDefinition(RouteItemInfoDto routeItemInfoDto) {
+    	if( routeItemInfoDto == null ) {
+    		return;
+    	}
+    	
+    	if( StringUtils.isBlank(routeItemInfoDto.getName()) ) {
+    		return;
+    	}
+    	
+    	if (this.routeItems.containsKey(routeItemInfoDto.getName())) {
+    		return;
+    	}
+    	
+    	this.buildRouteDefinition(routeItemInfoDto.getName(), routeItemInfoDto);
+    	
+    	
+    	List<RouteItemInfoDto> items = new ArrayList<>();
+    	items.add(routeItemInfoDto);
+    	
+    	this.routeItems.put(routeItemInfoDto.getName(), items);
+    	
+    	log.info("REFRESH loaded route definition:{}", routeItemInfoDto.getName());
+    	
+    	return;
+    	
     }
     
     private void handleRefreshErrors(Throwable e) {
@@ -347,6 +376,23 @@ public class DynamicRouteConfigurationService implements ApplicationEventPublish
 
         if (this.routeItems.containsKey(name)) {
             log.info("route items already exist for name:{}", name);
+            List<RouteItemInfoDto> storedRouteItems = this.routeItems.get(name);
+            storedRouteItems.addAll(newRouteItems);
+            
+            List<DynamicRouteItemInfo> routeItemInfos = new ArrayList<>();
+
+            for (RouteItemInfoDto d : newRouteItems) {
+                DynamicRouteItemInfo info = new DynamicRouteItemInfo();
+                info.setHost(d.getHost());
+                info.setHttpSchema(d.getSchema());
+                info.setName(d.getName());
+                info.setPort(d.getPort());
+
+                routeItemInfos.add(info);
+            }
+            
+            DynamicRouteItemInfoHolder.addDynamicRouteItemInfos(routeItemInfos);
+            
             return;
         }
 
